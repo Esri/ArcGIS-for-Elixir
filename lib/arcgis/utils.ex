@@ -1,4 +1,4 @@
-defmodule Toolbelt do
+defmodule ArcGIS.Utils do
   @moduledoc false
   require Logger
 

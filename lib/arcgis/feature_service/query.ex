@@ -1,4 +1,6 @@
 defmodule ArcGIS.FeatureService.Query do
+  alias ArcGIS.Utils
+
   @type aggregate_type :: :avg | :count | :max | :min | :sum
   @type aggregate :: %{type: aggregate_type, field: String.t(), name: String.t()}
   @type query_option ::
@@ -21,8 +23,8 @@ defmodule ArcGIS.FeatureService.Query do
         |> Keyword.get(:fields)
         |> out_fields(),
       returnGeometry: Keyword.get(options, :geometry?, false),
-      resultRecordCount: Keyword.get(options, :limit) |> Toolbelt.to_integer(10),
-      resultOffset: Keyword.get(options, :offset) |> Toolbelt.to_integer(0)
+      resultRecordCount: Keyword.get(options, :limit) |> Utils.to_integer(10),
+      resultOffset: Keyword.get(options, :offset) |> Utils.to_integer(0)
     }
     |> add_aggregates(Keyword.get(options, :aggregates))
   end
