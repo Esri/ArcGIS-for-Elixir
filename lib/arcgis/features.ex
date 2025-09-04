@@ -146,9 +146,6 @@ defmodule ArcGIS.Features do
     Enum.reduce(attributes, %{}, &sanitize_attribute/2)
   end
 
-  # TODO: type checks
-  defp sanitize_attribute({:geometry, _value}, acc), do: acc
-
   defp sanitize_attribute({key, value}, acc) do
     Map.put(acc, String.downcase(key), value)
   end
