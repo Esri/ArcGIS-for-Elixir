@@ -36,25 +36,6 @@ defmodule ArcGIS.Features do
     end
   end
 
-  def query_flat(feature_service_id, layer_id, options \\ []) do
-    # TODO: move the graphql resovler to query
-    case query(feature_service_id, layer_id, options) do
-      {:ok, features} ->
-        {
-          :ok,
-          Enum.map(features, fn feature ->
-            for {key, value} <- Map.get(feature, "attributes", %{}), reduce: %{} do
-              acc -> Map.put(acc, String.to_atom(key), value)
-            end
-            |> add_geometry(feature)
-          end)
-        }
-
-      error ->
-        error
-    end
-  end
-
   @spec delete(layer :: layer_definition, options :: Keyword.t()) :: boolean
   def delete(layer, options \\ []) do
     params =
@@ -171,10 +152,4 @@ defmodule ArcGIS.Features do
   defp sanitize_attribute({key, value}, acc) do
     Map.put(acc, String.downcase(key), value)
   end
-
-  defp add_geometry(feature, %{geometry: geometry} = feature) do
-    Map.put(feature, :geometry, geometry)
-  end
-
-  defp add_geometry(feature, _), do: feature
 end
