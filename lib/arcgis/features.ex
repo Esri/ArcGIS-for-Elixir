@@ -146,7 +146,11 @@ defmodule ArcGIS.Features do
     Enum.reduce(attributes, %{}, &sanitize_attribute/2)
   end
 
-  defp sanitize_attribute({key, value}, acc) do
+  defp sanitize_attribute({key, value}, acc) when is_binary(key) do
     Map.put(acc, String.downcase(key), value)
+  end
+
+  defp sanitize_attribute({key, value}, acc) do
+    Map.put(acc, key, value)
   end
 end
