@@ -10,15 +10,13 @@ defmodule ArcGIS.FeatureService do
         }
 
   def url(feature_service_id, options \\ []) do
-    Cachex.get(:feature_service_urls, feature_service_id)
-    |> possibly_cached_url(feature_service_id, options)
+    case Cachex.get(:feature_service_urls, feature_service_id) do
+      {:ok, url} -> url
+      _ -> fetch_and_cache_url(feature_service_id, options)
+    end
   end
 
-  defp possibly_cached_url({:ok, url}, _feature_service_id, _options) when url != nil do
-    {:ok, url}
-  end
-
-  defp possibly_cached_url(_, feature_service_id, options) do
+  defp fetch_and_cache_url(feature_service_id, options) do
     path = Path.join("/content/items", feature_service_id)
 
     with request_params <- Portal.request_url(path, options),
