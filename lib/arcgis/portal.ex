@@ -1,34 +1,42 @@
 defmodule ArcGIS.Portal do
+  @moduledoc """
+  An ArcGIS Portal.
+  """
   require Logger
 
-  defstruct [:portal_url, :services_url]
+  defstruct [:base_url]
 
+  @typedoc """
+  The configurateion of an ArcGIS portal necessary for its use,
+  in particular the base_url
+  """
   @type t :: %__MODULE__{
-          portal_url: String.t(),
-          services_url: String.t()
+          base_url: String.t()
         }
 
-  @type url_entries :: {:portal, url :: String.t()} | {:services, url :: String.t()}
-  @type urls :: %{urls: [url_entries]}
   @type url_meta :: %{String.t() => String.t()}
   @type portal_options :: [
-          {:headers, url_meta}
+          {:auth_token, String.t()}
+          | {:client_id, String.t()}
+          | {:headers, url_meta}
+          | {:response_format, String.t()}
           | {:params, url_meta}
-          | {:auth_token, String.t()}
+          | {:portal, t()}
         ]
   @spec request_url(relative_path :: String.t(), portal_options) ::
           [url: String.t(), params: url_meta, headers: url_meta]
+  @doc "Returns the url, parameters, and headedrs for an HTTP request given the relative path and the options passed in."
   def request_url(relative_path, options \\ []) do
     url =
       relative_path
       |> URI.parse()
-      |> create_url(options)
+      |> create_sharing_api_url(options)
       |> to_string()
 
     params =
       Keyword.get(options, :params, %{})
-      |> Map.put("clientId", Application.get_env(:arcgis, :portal_client_id))
-      |> Map.put("f", "json")
+      |> Map.put("clientId", client_id(options))
+      |> Map.put("f", response_format(options))
 
     headers =
       Keyword.get(options, :headers, %{})
@@ -37,31 +45,16 @@ defmodule ArcGIS.Portal do
     [url: url, params: params, headers: headers]
   end
 
+  @spec is_error_response?({:error, term} | {:ok, Req.Response.t()}) :: boolean
+  @doc "Checks if the response from an ArcGIS REST query represents an error, or not"
   def is_error_response?({:error, _error}), do: true
+
+  def is_error_response?({:ok, %Req.Response{status: status}}) when status < 200 or status > 299,
+    do: true
+
   def is_error_response?({:ok, %Req.Response{body: %{"error" => _error}}}), do: true
+  def is_error_response?({:ok, %Req.Response{body: %{}}}), do: true
   def is_error_response?(_), do: false
-
-  def handle_error(error, options \\ [log: true]) do
-    {:error, msg} = full_error = extract_error(error)
-
-    if Keyword.get(options, :log) == true do
-      Logger.warning("#{inspect(msg)}")
-    end
-
-    full_error
-  end
-
-  defp extract_error({:ok, %Req.Response{body: %{"error" => error}}}) do
-    {:error, "#{error["messageCode"]}#{error["message"]}"}
-  end
-
-  defp extract_error({:error, error}) do
-    {:error, error}
-  end
-
-  defp extract_error(error) do
-    {:error, error}
-  end
 
   defp add_token_header(headers, nil), do: headers
 
@@ -69,25 +62,26 @@ defmodule ArcGIS.Portal do
     Map.put(headers, "x-esri-authorization", "Bearer #{token}")
   end
 
-  defp create_url(%{scheme: nil, path: relative_path}, options) do
-    Keyword.get(options, :dest)
-    |> base_url(options)
-    |> URI.parse()
+  defp client_id(options) do
+    Keyword.get(options, :client_id, Application.get_env(:arcgis, :portal_client_id))
+  end
+
+  defp response_format(options) do
+    Keyword.get(options, :response_format, "json")
+  end
+
+  defp create_sharing_api_url(%{scheme: nil, path: relative_path}, options) do
+    options
+    |> Keyword.get(:portal, %{})
+    |> Map.get_lazy(:base_url, fn -> base_url_fallback() end)
+    |> URI.append_path("/sharing/rest")
     |> URI.append_path(relative_path)
   end
 
-  defp create_url(url, _options), do: url
+  defp create_sharing_api_url(url, _options), do: url
 
-  defp base_url(nil, options), do: base_url(:portal_url, options)
-
-  defp base_url(dest, options) do
-    options
-    |> Keyword.get(:portal, %{})
-    |> Map.get_lazy(dest, fn -> base_url_fallback(dest) end)
-  end
-
-  defp base_url_fallback(dest) do
+  defp base_url_fallback() do
     Application.get_env(:arcgis, :portal)
-    |> Map.get(dest)
+    |> Map.get(:base_url)
   end
 end

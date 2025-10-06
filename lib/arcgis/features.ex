@@ -1,6 +1,7 @@
 defmodule ArcGIS.Features do
   alias ArcGIS.FeatureService
   alias ArcGIS.Portal
+  alias ArcGIS.Telemetry
 
   @type layer_definition :: %{
           required(:feature_service_id) => String.t(),
@@ -32,7 +33,7 @@ defmodule ArcGIS.Features do
          {:ok, %{body: %{"features" => features}}} <- Req.get(request_params) do
       {:ok, features}
     else
-      error -> Portal.handle_error(error)
+      error -> Telemetry.handle_error(error)
     end
   end
 
@@ -49,16 +50,29 @@ defmodule ArcGIS.Features do
       receive_timeout: @five_minutes
     ]
 
-    with {:ok, url} <- FeatureService.url(layer.feature_service_id, options),
+    feature_service_url_request =
+      case FeatureService.url(layer.feature_service_id, options) do
+        {:ok, url} -> url
+        error -> error
+      end
+
+    with url when is_binary(url) <- feature_service_url_request,
          request_params <-
            Portal.request_url("#{url}/#{layer.layer_id}/deleteFeatures", options),
          {:ok, response} <- Req.post(request_params, post_args),
          false <- ArcGIS.Portal.is_error_response?(response) do
-      IO.inspect(response, label: "Delete response")
+      Telemetry.handle_success(%{action: :delete}, %{request_url: url, method: :post})
       true
     else
       error ->
-        Portal.handle_error(error)
+        metadata =
+          if is_binary(feature_service_url_request) do
+            %{request_url: feature_service_url_request, action: :delete}
+          else
+            %{action: :delete}
+          end
+
+        Telemetry.handle_error(error, metadata: metadata)
         false
     end
   end
@@ -96,16 +110,22 @@ defmodule ArcGIS.Features do
       receive_timeout: @five_minutes
     ]
 
-    with {:ok, feature_service_url} <- FeatureService.url(feature_service_id, all_options),
+    feature_service_url_request =
+      case FeatureService.url(feature_service_id, options) do
+        {:ok, url} -> url
+        error -> error
+      end
+
+    with feature_service_url when is_binary(feature_service_url) <- feature_service_url_request,
          url <- Portal.request_url("#{feature_service_url}/applyEdits", all_options),
          {:ok, response} <- Req.post(url, post_args),
          false <- ArcGIS.Portal.is_error_response?(response) do
-      # IO.inspect(response)
-      # TODO: errors are per mutation (e.g. "addResults", "deleteResults"), per layer
+      Telemetry.handle_success(%{action: :mutate}, metadata: %{request_url: url, method: :post})
       true
     else
       error ->
-        Portal.handle_error(error)
+        # TODO: errors are per mutation (e.g. "addResults", "deleteResults"), per layer
+        Telemetry.handle_error(error, url: feature_service_url_request)
         false
     end
   end

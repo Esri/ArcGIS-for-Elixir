@@ -1,6 +1,7 @@
 defmodule ArcGIS.FeatureService do
   alias ArcGIS.FeatureService.Schema
   alias ArcGIS.Portal
+  alias ArcGIS.Telemetry
 
   defstruct [:portal, :feature_service_id]
 
@@ -18,14 +19,16 @@ defmodule ArcGIS.FeatureService do
 
   defp fetch_and_cache_url(feature_service_id, options) do
     path = Path.join("/content/items", feature_service_id)
+    request = Portal.request_url(path, options)
 
-    with request_params <- Portal.request_url(path, options),
-         {:ok, %Req.Response{body: %{"url" => url}}} when url != nil <- Req.get(request_params) do
-      result = URI.parse(url)
-      Cachex.put(:feature_service_urls, feature_service_id, result)
-      {:ok, result}
-    else
-      error -> Portal.handle_error(error)
+    case Req.get(request) do
+      {:ok, %Req.Response{body: %{"url" => url}}} when url != nil ->
+        result = URI.parse(url)
+        Cachex.put(:feature_service_urls, feature_service_id, result)
+        {:ok, result}
+
+      error ->
+        Telemetry.handle_error(error, url: Keyword.get(request, :url))
     end
   end
 
@@ -35,7 +38,7 @@ defmodule ArcGIS.FeatureService do
          {:ok, schema} <- Schema.resolve(layers, tables) do
       {:ok, schema}
     else
-      error -> Portal.handle_error(error)
+      error -> Telemetry.handle_error(error)
     end
   end
 
@@ -46,7 +49,7 @@ defmodule ArcGIS.FeatureService do
          {:ok, %{body: body}} <- Req.get(request_params) do
       {:ok, body}
     else
-      error -> Portal.handle_error(error)
+      error -> Telemetry.handle_error(error)
     end
   end
 end

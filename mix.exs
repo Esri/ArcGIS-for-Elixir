@@ -25,7 +25,8 @@ defmodule ArcGIS.MixProject do
     [
       {:cachex, "~> 4.0"},
       {:req, "~> 0.5"},
-      {:mix_test_watch, "~> 1.0", only: [:dev, :test]}
+      {:telemetry, "~> 1.0"},
+      {:mix_test_watch, "~> 1.0", only: [:test]}
     ]
   end
 end
