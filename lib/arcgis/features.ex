@@ -1,18 +1,13 @@
 defmodule ArcGIS.Features do
-  alias ArcGIS.FeatureService
+  alias ArcGIS.Features.{Service, Query}
   alias ArcGIS.Portal
   alias ArcGIS.Telemetry
-
-  @type layer_definition :: %{
-          required(:feature_service_id) => String.t(),
-          required(:layer_Id) => non_neg_integer()
-        }
 
   @type feature_geometry :: map
   @type add_content :: %{geometry: feature_geometry, attributes: map}
   @type update_content :: %{geometry: feature_geometry, attributes: map}
   @type delete_content_by_id :: [non_neg_integer]
-  @type delete_content_by_global_id :: [non_neg_integer]
+  @type delete_content_by_global_id :: [String.t()]
   @type mutations :: %{
           optional(:create) => [add_content],
           optional(:update) => [update_content],
@@ -24,11 +19,16 @@ defmodule ArcGIS.Features do
 
   @five_minutes 5 * 60 * 1000
 
-  def query(feature_service_id, layer_id, options \\ []) do
-    params = FeatureService.Query.args(options)
-    all_options = Keyword.put(options, :params, params)
+  @doc "Query features"
+  def query(%Service{} = feature_service, layer_id, options \\ []) do
+    params = Query.args(options)
 
-    with {:ok, url} <- FeatureService.url(feature_service_id, all_options),
+    all_options =
+      options
+      |> Keyword.put(:params, params)
+      |> Keyword.put(:portal, feature_service.portal)
+
+    with {:ok, url} <- Service.url(feature_service),
          request_params <- Portal.request_url("#{url}/#{layer_id}/query", all_options),
          {:ok, %{body: %{"features" => features}}} <- Req.get(request_params) do
       {:ok, features}
@@ -37,52 +37,13 @@ defmodule ArcGIS.Features do
     end
   end
 
-  @spec delete(layer :: layer_definition, options :: Keyword.t()) :: boolean
-  def delete(layer, options \\ []) do
-    params =
-      Keyword.new()
-      |> Keyword.put(:returnDeleteResults, false)
-      |> FeatureService.Query.args()
-
-    post_args = [
-      form: Map.to_list(params),
-      connect_options: [timeout: @five_minutes],
-      receive_timeout: @five_minutes
-    ]
-
-    feature_service_url_request =
-      case FeatureService.url(layer.feature_service_id, options) do
-        {:ok, url} -> url
-        error -> error
-      end
-
-    with url when is_binary(url) <- feature_service_url_request,
-         request_params <-
-           Portal.request_url("#{url}/#{layer.layer_id}/deleteFeatures", options),
-         {:ok, response} <- Req.post(request_params, post_args),
-         false <- ArcGIS.Portal.is_error_response?(response) do
-      Telemetry.handle_success(%{action: :delete}, %{request_url: url, method: :post})
-      true
-    else
-      error ->
-        metadata =
-          if is_binary(feature_service_url_request) do
-            %{request_url: feature_service_url_request, action: :delete}
-          else
-            %{action: :delete}
-          end
-
-        Telemetry.handle_error(error, metadata: metadata)
-        false
-    end
-  end
-
   @spec mutate(
-          feature_service_id :: String.t(),
+          Service.t(),
           mutations :: mutations_by_layer_id,
           options :: mutate_options
         ) :: boolean
-  def mutate(feature_service_id, mutations, options \\ []) do
+  @doc "Add, update, and/or delete features from one or more layers."
+  def mutate(feature_service, mutations, options \\ []) do
     document =
       Enum.map(
         mutations,
@@ -97,7 +58,7 @@ defmodule ArcGIS.Features do
       |> to_string()
 
     # TODO: support non-globalID mutations
-    params = FeatureService.Query.args(options)
+    params = Query.args(options)
 
     all_options =
       options
@@ -111,7 +72,7 @@ defmodule ArcGIS.Features do
     ]
 
     feature_service_url_request =
-      case FeatureService.url(feature_service_id, options) do
+      case Service.url(feature_service) do
         {:ok, url} -> url
         error -> error
       end

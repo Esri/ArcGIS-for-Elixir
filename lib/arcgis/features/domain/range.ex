@@ -1,4 +1,4 @@
-defmodule ArcGIS.FeatureService.Domain.Range do
+defmodule ArcGIS.Features.Domain.Range do
   @enforce_keys [:name, :min, :max]
   defstruct [:name, :min, :max]
 

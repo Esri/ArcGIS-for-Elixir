@@ -1,15 +1,17 @@
 defmodule ArcGIS.MixProject do
   use Mix.Project
 
+  @version "0.1.0"
+
   def project do
     [
       app: :arcgis,
       name: "ArcGIS",
-      version: "0.1.0",
+      version: @version,
       elixir: "~> 1.18",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
-      docs: &docs/0,
+      docs: docs(),
       preferred_envs: [test_watch: :test]
     ]
   end
@@ -35,8 +37,14 @@ defmodule ArcGIS.MixProject do
 
   defp docs do
     [
-      main: "ArcGIS",
-      extras: ["README.md"]
+      extras: ["README.md"],
+      main: "readme",
+      source_ref: "v#{@version}",
+      formatters: ["html"],
+      groups_for_modules: [
+        Features: [~r/ArcGIS.Features(?!.Domain).*/],
+        Domains: [~r/ArcGIS.Features.Domain.*/]
+      ]
     ]
   end
 end

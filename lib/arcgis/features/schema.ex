@@ -1,6 +1,6 @@
-defmodule ArcGIS.FeatureService.Schema do
-  alias ArcGIS.FeatureService.Domain
-  alias ArcGIS.FeatureService.Field
+defmodule ArcGIS.Features.Schema do
+  alias ArcGIS.Features.Domain
+  alias ArcGIS.Features.Field
 
   def resolve(layers, tables) do
     {

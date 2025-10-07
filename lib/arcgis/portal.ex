@@ -25,7 +25,11 @@ defmodule ArcGIS.Portal do
         ]
   @spec request_url(relative_path :: String.t(), portal_options) ::
           [url: String.t(), params: url_meta, headers: url_meta]
-  @doc "Returns the url, parameters, and headedrs for an HTTP request given the relative path and the options passed in."
+  @doc """
+  Returns the url, parameters, and headers for an HTTP request given the relative path and the options passed in.
+
+  By default, results are requested in JSON format.
+  """
   def request_url(relative_path, options \\ []) do
     url =
       relative_path
@@ -46,7 +50,7 @@ defmodule ArcGIS.Portal do
   end
 
   @spec is_error_response?({:error, term} | {:ok, Req.Response.t()}) :: boolean
-  @doc "Checks if the response from an ArcGIS REST query represents an error, or not"
+  @doc "Checks if the response from an ArcGIS REST query represents an error"
   def is_error_response?({:error, _error}), do: true
 
   def is_error_response?({:ok, %Req.Response{status: status}}) when status < 200 or status > 299,
@@ -73,14 +77,14 @@ defmodule ArcGIS.Portal do
   defp create_sharing_api_url(%{scheme: nil, path: relative_path}, options) do
     options
     |> Keyword.get(:portal, %{})
-    |> Map.get_lazy(:base_url, fn -> base_url_fallback() end)
+    |> Map.get_lazy(:base_url, &base_url_fallback/0)
     |> URI.append_path("/sharing/rest")
     |> URI.append_path(relative_path)
   end
 
   defp create_sharing_api_url(url, _options), do: url
 
-  defp base_url_fallback() do
+  defp base_url_fallback do
     Application.get_env(:arcgis, :portal)
     |> Map.get(:base_url)
   end

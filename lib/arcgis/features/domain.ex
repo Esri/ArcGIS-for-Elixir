@@ -1,4 +1,4 @@
-defmodule ArcGIS.FeatureService.Domain do
+defmodule ArcGIS.Features.Domain do
   @type t ::
           __MODULE__.Enum.t()
           | __MODULE__.Range.t()

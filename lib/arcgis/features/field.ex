@@ -1,5 +1,5 @@
-defmodule ArcGIS.FeatureService.Field do
-  alias ArcGIS.FeatureService.Domain
+defmodule ArcGIS.Features.Field do
+  alias ArcGIS.Features.Domain
 
   defstruct [
     :name,
