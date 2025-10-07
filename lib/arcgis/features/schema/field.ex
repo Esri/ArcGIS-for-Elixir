@@ -1,4 +1,4 @@
-defmodule ArcGIS.Features.Field do
+defmodule ArcGIS.Features.Schema.Field do
   alias ArcGIS.Features.Domain
 
   defstruct [
