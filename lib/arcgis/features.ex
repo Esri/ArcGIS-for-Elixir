@@ -1,8 +1,9 @@
 defmodule ArcGIS.Features do
-  alias ArcGIS.Features.{Service, Query}
+  alias ArcGIS.Features.{Schema, Service, Query}
   alias ArcGIS.Portal
   alias ArcGIS.Telemetry
 
+  # TODO: create a Feature struct for typing purposes.
   @type feature_geometry :: map
   @type add_content :: %{geometry: feature_geometry, attributes: map}
   @type update_content :: %{geometry: feature_geometry, attributes: map}
@@ -91,7 +92,8 @@ defmodule ArcGIS.Features do
     end
   end
 
-  def sanitize(features) do
+  @spec sanitize(features :: [map], schema :: Schema.t() | nil)
+  def sanitize(features, _schema \\ nil) do
     # TODO: pass in the schema it should adhere to
     Enum.map(features, &sanitize_feature/1)
   end
