@@ -32,7 +32,10 @@ defmodule ArcGIS.Features.Service do
     end
   end
 
-  @spec schema(t()) :: {:ok, map} | {:error, String.t()}
+  @spec schema(t()) :: {:ok, Schema.t()} | {:error, String.t()}
+  @doc """
+  Fetches the `Schema` for a feature service.
+  """
   def schema(%__MODULE__{} = feature_service) do
     with {:ok, %{"layers" => layers, "tables" => tables}} <-
            query_service(feature_service, "/layers"),

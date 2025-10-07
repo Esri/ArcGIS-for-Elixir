@@ -19,7 +19,7 @@ defmodule ArcGIS.Features do
 
   @five_minutes 5 * 60 * 1000
 
-  @doc "Query features"
+  @doc "Query features in a Feature Service layer or table"
   def query(%Service{} = feature_service, layer_id, options \\ []) do
     params = Query.args(options)
 
@@ -91,6 +91,11 @@ defmodule ArcGIS.Features do
     end
   end
 
+  def sanitize(features) do
+    # TODO: pass in the schema it should adhere to
+    Enum.map(features, &sanitize_feature/1)
+  end
+
   defp add_create(arcgis_mutation, mutations) do
     features =
       mutations
@@ -113,17 +118,14 @@ defmodule ArcGIS.Features do
     Map.put(arcgis_mutation, :deletes, Map.get(mutations, :delete, []))
   end
 
-  def sanitize(features) do
-    # TODO: pass in the schema it should adhere to
-    Enum.map(features, &sanitize_feature/1)
-  end
-
   defp sanitize_feature(%{"attributes" => attributes} = feature) do
     %{feature | "attributes" => sanitize_attributes(attributes)}
   end
 
   defp sanitize_attributes(attributes) do
     # TODO: schema adherence
+    # TODO: domain support
+    # TODO: global ID brace wrapping
     Enum.reduce(attributes, %{}, &sanitize_attribute/2)
   end
 

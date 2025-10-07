@@ -2,6 +2,14 @@ defmodule ArcGIS.Features.Schema do
   alias ArcGIS.Features.Domain
   alias ArcGIS.Features.Schema.Field
 
+  @type store :: %{
+          type: :layer | :table,
+          id: String.t(),
+          fields: [Field.t()],
+          geometry: :none | atom
+        }
+
+  @type t :: %{[String.t()] => store}
   def resolve(layers, tables) do
     {
       :ok,
