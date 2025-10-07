@@ -3,9 +3,14 @@ defmodule ArcGIS.User do
   alias ArcGIS.Telemetry
 
   @type token_options :: {:referer, url :: String.t()} | {:portal_url, url :: String.t()}
-  @spec generateToken(username :: String.t(), password :: String.t(), options :: String.t() | nil) ::
+  @spec generateToken(
+          username :: String.t(),
+          password :: String.t(),
+          Portal.t(),
+          options :: Portal.portal_options()
+        ) ::
           String.t() | nil
-  def generateToken(username, password, options \\ []) do
+  def generateToken(username, password, %Portal{} = portal, options \\ []) do
     params =
       %{
         username: username,
@@ -14,9 +19,7 @@ defmodule ArcGIS.User do
         referer: referer(options)
       }
 
-    query_options =
-      []
-      |> with_portal(options)
+    query_options = Keyword.put(options, :portal, portal)
 
     post_options = [
       form: params,
@@ -28,13 +31,6 @@ defmodule ArcGIS.User do
       {:ok, token}
     else
       error -> Telemetry.handle_error(error)
-    end
-  end
-
-  defp with_portal(query_options, options) do
-    case Keyword.get(options, :portal_url) do
-      nil -> query_options
-      url -> Keyword.put(query_options, :portal, %ArcGIS.Portal{base_url: url})
     end
   end
 
