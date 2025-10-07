@@ -63,7 +63,7 @@ defmodule ArcGIS.Portal do
   end
 
   defp client_id(options) do
-    Keyword.get(options, :client_id, Application.get_env(:arcgis, :portal_client_id))
+    Keyword.get(options, :client_id, ArcGIS.client_id())
   end
 
   defp response_format(options) do
