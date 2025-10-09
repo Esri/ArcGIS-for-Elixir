@@ -5,7 +5,9 @@ defmodule ArcGIS.Application do
 
   @impl true
   def start(_type, _args) do
-    children = []
+    children = [
+      {Cachex, [:feature_service_urls]}
+    ]
 
     opts = [strategy: :one_for_one, name: ExArc.Supervisor]
     Supervisor.start_link(children, opts)
