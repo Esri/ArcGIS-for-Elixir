@@ -1,4 +1,5 @@
 defmodule ArcGIS.Feature.Schema.Field do
+  @moduledoc "A field in a table or layer schema."
   alias ArcGIS.Feature.Domain
 
   defstruct [
