@@ -37,9 +37,9 @@ defmodule ArcGIS.Telemetry do
   @doc "Standardized handling of ArcGIS response errors."
   def handle_error(error, options \\ []) do
     {:error, message, metadata} = extract_error(error)
-    metadata = Map.merge(Keyword.get(options, metadata, %{}), metadata)
+    metadata = Map.merge(Keyword.get(options, :metadata, %{}), metadata)
 
-    if Application.get_env(:arcgis, :log_errors, false) or Keyword.get(options, :log) == true do
+    if Application.get_env(:arcgis, :log_errors, true) or Keyword.get(options, :log) == true do
       Logger.warning("Request FAILED: #{inspect(metadata)} => #{inspect(message)}")
     end
 
@@ -62,7 +62,14 @@ defmodule ArcGIS.Telemetry do
   end
 
   defp extract_error({:ok, %Req.Response{body: %{"error" => error}}}) do
-    {:error, error["message"], %{status: error["messageCode"]}}
+    {
+      :error,
+      error["message"],
+      %{
+        details: Map.get(error, "details"),
+        status: Map.get(error, "code")
+      }
+    }
   end
 
   defp extract_error({:ok, %Req.Response{} = response}) do
