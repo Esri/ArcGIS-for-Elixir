@@ -1,8 +1,8 @@
 defmodule ArcGIS.User do
+  @moduledoc "User accounts on ArcGIS"
   alias ArcGIS.Portal
   alias ArcGIS.Telemetry
 
-  @type token_options :: {:referer, url :: String.t()} | {:portal_url, url :: String.t()}
   @spec generate_token(
           username :: String.t(),
           password :: String.t(),
@@ -10,6 +10,10 @@ defmodule ArcGIS.User do
           options :: Portal.portal_options()
         ) ::
           String.t() | nil
+  @doc """
+  Generates a token for a given user on a portal. If to be used with a web frontend,
+  pass in `referer` value via the `options` parameter.
+  """
   def generate_token(username, password, %Portal{} = portal, options \\ []) do
     params =
       %{
