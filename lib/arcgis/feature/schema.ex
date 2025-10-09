@@ -4,8 +4,6 @@ defmodule ArcGIS.Feature.Schema do
   """
   alias ArcGIS.Feature.Domain
   alias ArcGIS.Feature.Schema.Field
-  alias ArcGIS.Feature.Service
-  alias ArcGIS.Telemetry
 
   @type store :: %{
           type: :layer | :table,
@@ -14,19 +12,6 @@ defmodule ArcGIS.Feature.Schema do
           geometry: :none | atom
         }
   @type t :: %{[String.t()] => store}
-
-  @spec get(Service.t(), Portal.portal_options()) ::
-          {:ok, t()} | {:error, reason :: String.t()}
-  def get(%Service{} = service, options) do
-    with {:ok, %{"layers" => layers, "tables" => tables}} <-
-           Service.get(service, "/layers", options),
-         {:ok, schema} <- resolve(layers, tables) do
-      {:ok, schema}
-    else
-      error -> Telemetry.handle_error(error)
-    end
-  end
-
   def resolve(layers, tables) do
     {
       :ok,
