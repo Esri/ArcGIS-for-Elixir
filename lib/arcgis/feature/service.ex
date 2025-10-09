@@ -5,7 +5,6 @@ defmodule ArcGIS.Feature.Service do
   For fetching data from a feature service, see `ArcGIS.Feature`.
   """
 
-  alias ArcGIS.Feature.Schema
   alias ArcGIS.Portal
   alias ArcGIS.Telemetry
 
@@ -64,20 +63,6 @@ defmodule ArcGIS.Feature.Service do
     case Cachex.get(@cache_name, cache_key(service)) do
       {:ok, url} when url != nil -> {:ok, url}
       _ -> fetch_and_cache_url(service, options)
-    end
-  end
-
-  @spec schema(t(), options :: Keyword.t()) :: {:ok, Schema.t()} | {:error, String.t()}
-  @doc """
-  Fetches the `Schema` for a feature service.
-  """
-  def schema(%__MODULE__{} = service, options \\ []) do
-    with {:ok, %{"layers" => layers, "tables" => tables}} <-
-           get(service, "/layers", options),
-         {:ok, schema} <- Schema.resolve(layers, tables) do
-      {:ok, schema}
-    else
-      error -> Telemetry.handle_error(error)
     end
   end
 
