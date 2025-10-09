@@ -1,6 +1,6 @@
 defmodule ArcGIS.Feature do
-  alias ArcGIS.Feature.{Schema, Service, Query}
-  alias ArcGIS.Portal
+  alias ArcGIS.Feature.Schema
+  alias ArcGIS.Feature.Service
   alias ArcGIS.Telemetry
 
   # TODO: define geometry properly
@@ -18,23 +18,15 @@ defmodule ArcGIS.Feature do
 
   @type mutate_options :: [{:rollbackOnFailure, boolean}]
 
-  @five_minutes 5 * 60 * 1000
-
   @doc "Query features in a Feature Service layer or table"
   def query(%Service{} = feature_service, layer_id, options \\ []) do
-    params = Query.args(options)
+    case Service.get(feature_service, "/#{layer_id}/query", options) do
+      %{"features" => features} ->
+        {:ok, features}
 
-    all_options =
-      options
-      |> Keyword.put(:params, params)
-      |> Keyword.put(:portal, feature_service.portal)
-
-    with {:ok, url} <- Service.url(feature_service),
-         request_params <- Portal.request_url("#{url}/#{layer_id}/query", all_options),
-         {:ok, %{body: %{"features" => features}}} <- Req.get(request_params) do
-      {:ok, features}
-    else
-      error -> Telemetry.handle_error(error)
+      error ->
+        Telemetry.handle_error(error)
+        error
     end
   end
 
@@ -45,7 +37,7 @@ defmodule ArcGIS.Feature do
           options :: mutate_options
         ) :: boolean
   @doc "Add, update, and/or delete features from one or more layers."
-  def mutate(feature_service, mutations, options \\ []) do
+  def mutate(service, mutations, options \\ []) do
     document =
       Enum.map(
         mutations,
@@ -59,36 +51,18 @@ defmodule ArcGIS.Feature do
       |> :json.encode()
       |> to_string()
 
-    # TODO: support non-globalID mutations
-    params = Query.args(options)
+    # TODO: support non-globalID mutations?
+    all_options = Keyword.put(options, :params, %{useGlobalIds: true})
+    document = [edits: document]
 
-    all_options =
-      options
-      |> Keyword.put(:params, params)
-      |> Keyword.put(:useGlobalIds, true)
+    case Service.post(service, "/applyEdits", document, all_options) do
+      {:ok, _body} ->
+        Telemetry.handle_success(%{action: :mutate_features}, metadata: %{service: service})
+        true
 
-    post_args = [
-      form: [edits: document],
-      connect_options: [timeout: @five_minutes],
-      receive_timeout: @five_minutes
-    ]
-
-    feature_service_url_request =
-      case Service.url(feature_service) do
-        {:ok, url} -> url
-        error -> error
-      end
-
-    with feature_service_url when is_binary(feature_service_url) <- feature_service_url_request,
-         url <- Portal.request_url("#{feature_service_url}/applyEdits", all_options),
-         {:ok, response} <- Req.post(url, post_args),
-         false <- ArcGIS.Portal.is_error_response?(response) do
-      Telemetry.handle_success(%{action: :mutate}, metadata: %{request_url: url, method: :post})
-      true
-    else
-      error ->
+      {:error, _} = error ->
         # TODO: errors are per mutation (e.g. "addResults", "deleteResults"), per layer
-        Telemetry.handle_error(error, url: feature_service_url_request)
+        Telemetry.handle_error(error, metadata: %{service: service, action: :mutate_features})
         false
     end
   end

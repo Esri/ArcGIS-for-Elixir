@@ -4,6 +4,8 @@ defmodule ArcGIS.Portal do
   """
   require Logger
 
+  alias ArcGIS.Utils
+
   defstruct [:base_url]
 
   @typedoc """
@@ -11,7 +13,7 @@ defmodule ArcGIS.Portal do
   in particular the base_url
   """
   @type t :: %__MODULE__{
-          base_url: String.t()
+          base_url: URI.t()
         }
 
   @type url_meta :: %{String.t() => String.t()}
@@ -23,14 +25,29 @@ defmodule ArcGIS.Portal do
           | {:params, url_meta}
           | {:portal, t()}
         ]
-  @spec request_url(relative_path :: String.t(), portal_options) ::
+
+  @type aggregate_type :: :avg | :count | :max | :min | :sum
+  @type aggregate :: %{type: aggregate_type, field: String.t(), name: String.t()}
+  @type query_option ::
+          {:where, String.t()}
+          | {:fields, [String.t()]}
+          | {:geometry?, boolean}
+          | {:limit, non_neg_integer()}
+          | {:offset, non_neg_integer()}
+          | {:aggregates, [aggregate]}
+  @type query_options :: [query_option]
+
+  @spec new(url :: String.t()) :: t()
+  def new(url), do: %__MODULE__{base_url: URI.new!(url)}
+
+  @spec build_request(relative_path :: String.t(), portal_options) ::
           [url: String.t(), params: url_meta, headers: url_meta]
   @doc """
   Returns the url, parameters, and headers for an HTTP request given the relative path and the options passed in.
 
   By default, results are requested in JSON format.
   """
-  def request_url(relative_path, options \\ []) do
+  def build_request(relative_path, options \\ []) do
     url =
       relative_path
       |> URI.parse()
@@ -38,13 +55,15 @@ defmodule ArcGIS.Portal do
       |> to_string()
 
     params =
-      Keyword.get(options, :params, %{})
-      |> Map.put("clientId", client_id(options))
-      |> Map.put("f", response_format(options))
+      query_parameters(options)
+      |> Map.put(:clientId, client_id(options))
+      |> Map.put(:f, response_format(options))
+      |> Map.merge(Keyword.get(options, :params, %{}))
 
     headers =
-      Keyword.get(options, :headers, %{})
+      %{}
       |> add_token_header(Keyword.get(options, :auth_token))
+      |> Map.merge(Keyword.get(options, :headers, %{}))
 
     [url: url, params: params, headers: headers]
   end
@@ -88,4 +107,53 @@ defmodule ArcGIS.Portal do
     Application.get_env(:arcgis, :portal)
     |> Map.get(:base_url)
   end
+
+  @spec query_parameters(options :: query_options) :: map
+  defp query_parameters(options) do
+    %{
+      where:
+        options
+        |> Keyword.get(:where)
+        |> where(),
+      outFields:
+        options
+        |> Keyword.get(:fields)
+        |> out_fields(),
+      returnGeometry: Keyword.get(options, :geometry?, false),
+      resultRecordCount: Keyword.get(options, :limit) |> Utils.to_integer(10),
+      resultOffset: Keyword.get(options, :offset) |> Utils.to_integer(0)
+    }
+    |> add_aggregates(Keyword.get(options, :aggregates))
+  end
+
+  defp add_aggregates(args, nil), do: args
+
+  defp add_aggregates(args, aggregates) do
+    args
+    |> Map.delete(:outFields)
+    |> Map.delete(:resultRecordCount)
+    |> Map.delete(:resultOffset)
+    |> Map.put(:outStatistics, to_aggregate_form(aggregates))
+  end
+
+  defp to_aggregate_form(aggregates) do
+    Enum.map(
+      aggregates,
+      fn aggregate ->
+        %{
+          statisticType: aggregate.type,
+          onStatisticField: aggregate.field,
+          outStatisticFieldName: aggregate.name
+        }
+      end
+    )
+    |> :json.encode()
+    |> to_string()
+  end
+
+  defp where(nil), do: "1=1"
+  defp where(filter), do: filter
+
+  defp out_fields(nil), do: "*"
+  defp out_fields(fields), do: Enum.join(fields, ",")
 end
