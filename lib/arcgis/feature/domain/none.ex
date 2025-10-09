@@ -1,4 +1,4 @@
-defmodule ArcGIS.Features.Domain.None do
+defmodule ArcGIS.Feature.Domain.None do
   defstruct []
 
   @type t :: %__MODULE__{}

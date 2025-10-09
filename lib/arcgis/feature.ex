@@ -1,18 +1,18 @@
-defmodule ArcGIS.Features do
-  alias ArcGIS.Features.{Schema, Service, Query}
+defmodule ArcGIS.Feature do
+  alias ArcGIS.Feature.{Schema, Service, Query}
   alias ArcGIS.Portal
   alias ArcGIS.Telemetry
 
-  # TODO: create a Feature struct for typing purposes.
+  # TODO: define geometry properly
   @type feature_geometry :: map
-  @type add_content :: %{geometry: feature_geometry, attributes: map}
-  @type update_content :: %{geometry: feature_geometry, attributes: map}
-  @type delete_content_by_id :: [non_neg_integer]
-  @type delete_content_by_global_id :: [String.t()]
+  @typedoc "An ArcGIS feature made up of attributes and geometry"
+  @type t :: %{geometry: feature_geometry, attributes: map}
+  @type features_by_id :: [non_neg_integer]
+  @type features_by_global_id :: [String.t()]
   @type mutations :: %{
-          optional(:create) => [add_content],
-          optional(:update) => [update_content],
-          optional(:delete) => [delete_content_by_id] | [delete_content_by_global_id]
+          optional(:create) => [t()],
+          optional(:update) => [t()],
+          optional(:delete) => [features_by_id] | [features_by_global_id]
         }
   @type mutations_by_layer_id :: %{non_neg_integer => mutations}
 
@@ -38,6 +38,7 @@ defmodule ArcGIS.Features do
     end
   end
 
+  # TODO: should this should return :ok/:error tuples?
   @spec mutate(
           Service.t(),
           mutations :: mutations_by_layer_id,
@@ -92,10 +93,11 @@ defmodule ArcGIS.Features do
     end
   end
 
-  @spec sanitize(features :: [map], schema :: Schema.t() | nil)
-  def sanitize(features, _schema \\ nil) do
+  @spec sanitize(features :: [t()], schema :: Schema.t() | nil) :: [t()]
+  @doc "Conforms a list of feature to ArcGIS requirements, making them appropriate for e.g. use in mutations"
+  def sanitize(features, schema \\ nil) do
     # TODO: pass in the schema it should adhere to
-    Enum.map(features, &sanitize_feature/1)
+    Enum.map(features, fn feature -> sanitize_feature(feature, schema) end)
   end
 
   defp add_create(arcgis_mutation, mutations) do
@@ -120,7 +122,7 @@ defmodule ArcGIS.Features do
     Map.put(arcgis_mutation, :deletes, Map.get(mutations, :delete, []))
   end
 
-  defp sanitize_feature(%{"attributes" => attributes} = feature) do
+  defp sanitize_feature(%{"attributes" => attributes} = feature, _schema) do
     %{feature | "attributes" => sanitize_attributes(attributes)}
   end
 

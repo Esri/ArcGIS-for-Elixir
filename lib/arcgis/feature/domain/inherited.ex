@@ -1,4 +1,4 @@
-defmodule ArcGIS.Features.Domain.Inherited do
+defmodule ArcGIS.Feature.Domain.Inherited do
   @enforce_keys [:name]
   defstruct [:name]
 

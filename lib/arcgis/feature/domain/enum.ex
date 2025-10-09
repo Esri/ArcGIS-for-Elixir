@@ -1,4 +1,4 @@
-defmodule ArcGIS.Features.Domain.Enum do
+defmodule ArcGIS.Feature.Domain.Enum do
   @enforce_keys [:name, :values]
   defstruct [:name, values: []]
 

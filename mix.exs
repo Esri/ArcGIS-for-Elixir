@@ -42,9 +42,9 @@ defmodule ArcGIS.MixProject do
       source_ref: "v#{@version}",
       formatters: ["html"],
       groups_for_modules: [
-        Features: [~r/ArcGIS.Features(?!.(Domain|Schema)).*/],
-        Schemas: [~r/ArcGIS.Features.Schema.*/],
-        Domains: [~r/ArcGIS.Features.Domain.*/]
+        Features: [~r/ArcGIS.Feature(?!.(Domain|Schema)).*/],
+        Schemas: [~r/ArcGIS.Feature.Schema.*/],
+        Domains: [~r/ArcGIS.Feature.Domain.*/]
       ]
     ]
   end

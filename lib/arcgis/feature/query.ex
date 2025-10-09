@@ -1,4 +1,4 @@
-defmodule ArcGIS.Features.Query do
+defmodule ArcGIS.Feature.Query do
   alias ArcGIS.Utils
 
   @type aggregate_type :: :avg | :count | :max | :min | :sum

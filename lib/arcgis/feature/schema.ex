@@ -1,6 +1,6 @@
-defmodule ArcGIS.Features.Schema do
-  alias ArcGIS.Features.Domain
-  alias ArcGIS.Features.Schema.Field
+defmodule ArcGIS.Feature.Schema do
+  alias ArcGIS.Feature.Domain
+  alias ArcGIS.Feature.Schema.Field
 
   @type store :: %{
           type: :layer | :table,

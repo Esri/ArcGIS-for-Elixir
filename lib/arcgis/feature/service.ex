@@ -1,11 +1,11 @@
-defmodule ArcGIS.Features.Service do
+defmodule ArcGIS.Feature.Service do
   @moduledoc """
   Feature service acccess.
 
-  For fetching data from a feature service, see `ArcGIS.Features`.
+  For fetching data from a feature service, see `ArcGIS.Feature`.
   """
 
-  alias ArcGIS.Features.Schema
+  alias ArcGIS.Feature.Schema
   alias ArcGIS.Portal
   alias ArcGIS.Telemetry
 
