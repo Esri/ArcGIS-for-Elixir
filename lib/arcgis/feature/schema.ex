@@ -1,18 +1,20 @@
 defmodule ArcGIS.Feature.Schema do
   @moduledoc """
-    A representation fo the tables and layers in a feature service.
+  The tables and layers in a feature service.
   """
   alias ArcGIS.Feature.Domain
   alias ArcGIS.Feature.Schema.Field
   alias ArcGIS.Feature.Service
   alias ArcGIS.Telemetry
 
+  @typedoc "Description of the storage for a table or layer"
   @type store :: %{
           type: :layer | :table,
           id: String.t(),
           fields: [Field.t()],
           geometry: :none | atom
         }
+  @typedoc "A schema, with names of tables and layers and their individual storage schemas"
   @type t :: %{[String.t()] => store}
 
   @spec get(Service.t(), Portal.portal_options()) ::
