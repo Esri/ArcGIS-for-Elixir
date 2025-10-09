@@ -3,14 +3,14 @@ defmodule ArcGIS.User do
   alias ArcGIS.Telemetry
 
   @type token_options :: {:referer, url :: String.t()} | {:portal_url, url :: String.t()}
-  @spec generateToken(
+  @spec generate_token(
           username :: String.t(),
           password :: String.t(),
           Portal.t(),
           options :: Portal.portal_options()
         ) ::
           String.t() | nil
-  def generateToken(username, password, %Portal{} = portal, options \\ []) do
+  def generate_token(username, password, %Portal{} = portal, options \\ []) do
     params =
       %{
         username: username,
@@ -21,16 +21,18 @@ defmodule ArcGIS.User do
 
     query_options = Keyword.put(options, :portal, portal)
 
-    post_options = [
-      form: params,
-      connect_options: [transport_opts: [verify: :verify_none]]
-    ]
+    post_options =
+      [
+        form: params,
+        connect_options: [transport_opts: [verify: :verify_none]]
+      ]
 
-    with request_params <- Portal.request_url("/generateToken", query_options),
-         {:ok, %{body: %{"token" => token}}} <- Req.post(request_params, post_options) do
+    with request <- Portal.build_request("/generateToken", query_options),
+         {:ok, %{body: %{"token" => token}}} <- Req.post(request, post_options) do
       {:ok, token}
     else
-      error -> Telemetry.handle_error(error)
+      error ->
+        Telemetry.handle_error(error)
     end
   end
 
