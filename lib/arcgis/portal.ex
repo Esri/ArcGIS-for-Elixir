@@ -17,31 +17,43 @@ defmodule ArcGIS.Portal do
         }
 
   @type url_meta :: %{String.t() => String.t()}
-  @type portal_options :: [
+  @type portal_option ::
           {:auth_token, String.t()}
           | {:client_id, String.t()}
           | {:headers, url_meta}
-          | {:response_format, String.t()}
           | {:params, url_meta}
           | {:portal, t()}
           | {:referer, String.t()}
-        ]
 
   @type aggregate_type :: :avg | :count | :max | :min | :sum
   @type aggregate :: %{type: aggregate_type, field: String.t(), name: String.t()}
+  @type response_format :: :geojson | :htmnl | :json | :pbf
   @type query_option ::
-          {:where, String.t()}
+          {:aggregates, [aggregate]}
           | {:fields, [String.t()]}
           | {:geometry?, boolean}
           | {:limit, non_neg_integer()}
           | {:offset, non_neg_integer()}
-          | {:aggregates, [aggregate]}
-  @type query_options :: [query_option]
+          | {:response_format, response_format}
+          | {:where, String.t()}
+  @type request_option :: portal_option | query_option
 
   @spec new(url :: String.t()) :: t()
   def new(url), do: %__MODULE__{base_url: URI.new!(url)}
 
-  @spec build_request(relative_path :: String.t(), portal_options) ::
+  @spec self(t(), options :: [portal_option]) :: {:ok, map} | {:error, reason :: String.t()}
+  @doc "Returns information about the Portal using the `self` query"
+  def self(%__MODULE__{} = portal, options \\ []) do
+    request = build_request("/portals/self", Keyword.put(options, :portal, portal))
+
+    with {:ok, %{body: body}} <- Req.get(request) do
+      {:ok, body}
+    else
+      error -> Telemetry.handle_error(error)
+    end
+  end
+
+  @spec build_request(relative_path :: String.t(), [request_option]) ::
           [url: String.t(), params: url_meta, headers: url_meta]
   @doc """
   Returns the url, parameters, and headers for an HTTP request given the relative path and the options passed in.
@@ -109,7 +121,7 @@ defmodule ArcGIS.Portal do
     |> Map.get(:base_url)
   end
 
-  @spec query_parameters(options :: query_options) :: map
+  @spec query_parameters(options :: [query_option]) :: map
   defp query_parameters(options) do
     %{
       where:

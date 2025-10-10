@@ -7,7 +7,7 @@ defmodule ArcGIS.User do
           username :: String.t(),
           password :: String.t(),
           Portal.t(),
-          options :: Portal.portal_options()
+          options :: [Portal.request_option()]
         ) ::
           String.t() | nil
   @doc """

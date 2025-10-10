@@ -6,7 +6,7 @@ defmodule ArcGIS.Feature do
   # TODO: define geometry properly
   @type feature_geometry :: map
   @typedoc "An ArcGIS feature made up of attributes and geometry"
-  @type t :: %{geometry: feature_geometry, attributes: map}
+  @type t :: %{attributes: %{[key :: String.t()] => term}, geometry: feature_geometry}
   @type features_by_id :: [non_neg_integer]
   @type features_by_global_id :: [String.t()]
   @type mutations :: %{
@@ -16,8 +16,13 @@ defmodule ArcGIS.Feature do
         }
   @type mutations_by_layer_id :: %{non_neg_integer => mutations}
 
-  @type mutate_options :: [{:rollbackOnFailure, boolean}]
+  @type upload_format :: :json | :pbf
+  @type mutate_option ::
+          {:rollback_on_failure, boolean}
+          | {:upload_format, upload_format}
+          | {:use_global_ids, boolean}
 
+  @spec query(Service.t(), layer_id :: non_neg_integer(), [Portal.request_option()]) :: [t()]
   @doc "Query features in a Feature Service layer or table"
   def query(%Service{} = feature_service, layer_id, options \\ []) do
     case Service.get(feature_service, "/#{layer_id}/query", options) do
@@ -34,9 +39,9 @@ defmodule ArcGIS.Feature do
   @spec mutate(
           Service.t(),
           mutations :: mutations_by_layer_id,
-          options :: mutate_options
+          options :: [Portal.request_option() | mutate_option]
         ) :: boolean
-  @doc "Add, update, and/or delete features from one or more layers."
+  @doc "Add, update, and/or delete features from one or more layers. Defaults to rolling back on failure."
   def mutate(service, mutations, options \\ []) do
     document =
       Enum.map(
@@ -51,11 +56,18 @@ defmodule ArcGIS.Feature do
       |> :json.encode()
       |> to_string()
 
-    # TODO: support non-globalID mutations?
-    all_options = Keyword.put(options, :params, %{useGlobalIds: true})
+    params = %{
+      useGlobalIds: Keyword.get(options, :use_global_ids, true),
+      rollbackOnFailure: Keyword.get(options, :rollback_on_failure, true),
+      uploadFormat: Keyword.get(options, :upload_format, :json)
+    }
+
+    options_with_params = Keyword.put(options, :params, params)
+
+    # TODO: properly support PBF formats
     document = [edits: document]
 
-    case Service.post(service, "/applyEdits", document, all_options) do
+    case Service.post(service, "/applyEdits", document, options_with_params) do
       {:ok, _body} ->
         Telemetry.handle_success(%{action: :mutate_features}, metadata: %{service: service})
         true
