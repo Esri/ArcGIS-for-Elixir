@@ -1,9 +1,10 @@
 defmodule ArcGIS.Portal do
   @moduledoc """
-  An ArcGIS Portal.
+  An ArcGIS Portal. This may refer to an ArcGIS Online endpoint or an ArcGIS Enterprise installation.
   """
   require Logger
 
+  alias ArcGIS.Telemetry
   alias ArcGIS.Utils
 
   defstruct [:base_url]
@@ -39,6 +40,7 @@ defmodule ArcGIS.Portal do
   @type request_option :: portal_option | query_option
 
   @spec new(url :: String.t()) :: t()
+  @doc "Create a `t:Portal.t/0` from its base URL."
   def new(url), do: %__MODULE__{base_url: URI.new!(url)}
 
   @spec self(t(), options :: [portal_option]) :: {:ok, map} | {:error, reason :: String.t()}
@@ -56,7 +58,8 @@ defmodule ArcGIS.Portal do
   @spec build_request(relative_path :: String.t(), [request_option]) ::
           [url: String.t(), params: url_meta, headers: url_meta]
   @doc """
-  Returns the url, parameters, and headers for an HTTP request given the relative path and the options passed in.
+  Returns the url, parameters, and headers for an HTTP request given a path to an endpoint relative to the 
+  Portal's default URL and additional options such as authentication information.
 
   By default, results are requested in JSON format.
   """
