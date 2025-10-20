@@ -10,8 +10,7 @@ defmodule ArcGIS.Portal do
   defstruct [:base_url]
 
   @typedoc """
-  The configurateion of an ArcGIS portal necessary for its use,
-  in particular the base_url
+  The configuration of an ArcGIS portal necessary for its use, in particular the base_url
   """
   @type t :: %__MODULE__{
           base_url: URI.t()
@@ -58,7 +57,7 @@ defmodule ArcGIS.Portal do
   @spec build_request(relative_path :: String.t(), [request_option]) ::
           [url: String.t(), params: url_meta, headers: url_meta]
   @doc """
-  Returns the url, parameters, and headers for an HTTP request given a path to an endpoint relative to the 
+  Returns the url, parameters, and headers for an HTTP request given a path to an endpoint relative to the
   Portal's default URL and additional options such as authentication information.
 
   By default, results are requested in JSON format.
