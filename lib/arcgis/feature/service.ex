@@ -7,6 +7,7 @@ defmodule ArcGIS.Feature.Service do
 
   alias ArcGIS.Portal
   alias ArcGIS.Telemetry
+  alias __MODULE__.CreateParameters
 
   @cache_name :feature_service_urls
   @five_minutes 5 * 60 * 1000
@@ -22,6 +23,48 @@ defmodule ArcGIS.Feature.Service do
           portal: Portal.t(),
           id: String.t()
         }
+
+  @spec create(Portal.t(), CreateParameters.t(), options :: Keyword.t()) :: t()
+  def create(%Portal{} = portal, %CreateParameters{} = parameters, options) do
+    post_args = [
+      form: Enum.reduce(parameters, %{}, &generate_create_document/2),
+      connect_options: [timeout: @five_minutes],
+      receive_timeout: @five_minutes
+    ]
+
+    # FIXME: get username from auth token OR the create params
+    username = ""
+
+    folder =
+      case parameters.folder_id do
+        nil -> ""
+        id -> "/#{id}"
+      end
+
+    resource = "/content/users/#{username}#{folder}/createService"
+
+    with request <- Portal.build_request(resource, portal: portal),
+         {:ok, %{body: body}} <- Req.post(request, post_options) do
+      body
+    else
+      error -> {:error, error}
+    end
+  end
+
+  defp generate_create_document([_, nil], acc), do: acc
+
+  defp generate_create_document([key, value], acc)
+       when key in [
+              :name,
+              :description,
+              :has_static_data,
+              :max_record_count,
+              :service_description
+            ] do
+    Map.put(acc, Inflex.camelize(key, :lower), value)
+  end
+
+  defp generate_create_document([_, nil], acc), do: acc
 
   @spec get(t(), resource :: String.t(), options :: Keyword.t()) ::
           {:ok, map} | {:error, reason :: String.t()}
