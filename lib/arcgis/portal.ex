@@ -29,7 +29,8 @@ defmodule ArcGIS.Portal do
   @type aggregate :: %{type: aggregate_type, field: String.t(), name: String.t()}
   @type response_format :: :geojson | :htmnl | :json | :pbf
   @type query_option ::
-          {:aggregates, [aggregate]}
+          {:is_features_query?, :boolean}
+          | {:aggregates, [aggregate]}
           | {:fields, [String.t()]}
           | {:geometry?, boolean}
           | {:limit, non_neg_integer()}
@@ -70,7 +71,7 @@ defmodule ArcGIS.Portal do
       |> to_string()
 
     params =
-      query_parameters(options)
+      query_parameters(options, Keyword.get(options, :is_features_query?, true))
       |> Map.put(:clientId, client_id(options))
       |> Map.put(:f, response_format(options))
       |> Map.merge(Keyword.get(options, :params, %{}))
@@ -123,8 +124,10 @@ defmodule ArcGIS.Portal do
     |> Map.get(:base_url)
   end
 
-  @spec query_parameters(options :: [query_option]) :: map
-  defp query_parameters(options) do
+  @spec query_parameters(options :: [query_option], is_features_query? :: boolean) :: map
+  defp query_parameters(_options, false), do: %{}
+
+  defp query_parameters(options, true) do
     %{
       where:
         options
