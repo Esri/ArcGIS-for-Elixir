@@ -51,21 +51,6 @@ defmodule ArcGIS.Feature.Service do
     end
   end
 
-  defp generate_create_document([_, nil], acc), do: acc
-
-  defp generate_create_document([key, value], acc)
-       when key in [
-              :name,
-              :description,
-              :has_static_data,
-              :max_record_count,
-              :service_description
-            ] do
-    Map.put(acc, Inflex.camelize(key, :lower), value)
-  end
-
-  defp generate_create_document([_, nil], acc), do: acc
-
   @spec get(t(), resource :: String.t(), options :: Keyword.t()) ::
           {:ok, map} | {:error, reason :: String.t()}
   def get(%__MODULE__{} = service, resource, options \\ []) do
@@ -148,4 +133,29 @@ defmodule ArcGIS.Feature.Service do
         error
     end
   end
+
+  defp generate_create_document([_, nil], acc), do: acc
+  defp generate_create_document([:capabilities, []], acc), do: acc
+
+  defp generate_create_document([:capabilities, capabilities], acc) do
+    capabilities_string =
+      capabilities
+      |> Enum.map(fn capability -> Inflex.camelize(capability) end)
+      |> Enum.join(",")
+
+    Map.put(acc, "Capabilities", capabilities_string)
+  end
+
+  defp generate_create_document([key, value], acc)
+       when key in [
+              :name,
+              :description,
+              :has_static_data,
+              :max_record_count,
+              :service_description
+            ] do
+    Map.put(acc, Inflex.camelize(key, :lower), value)
+  end
+
+  defp generate_create_document([_, nil], acc), do: acc
 end
