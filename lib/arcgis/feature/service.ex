@@ -26,14 +26,31 @@ defmodule ArcGIS.Feature.Service do
 
   @spec create(Portal.t(), CreateParameters.t(), options :: Keyword.t()) :: t()
   def create(%Portal{} = portal, %CreateParameters{} = parameters, options) do
-    post_args = [
-      form: Enum.reduce(parameters, %{}, &generate_create_document/2),
-      connect_options: [timeout: @five_minutes],
-      receive_timeout: @five_minutes
-    ]
+    # TODO: support the following? tags, snippet, overwrite, isView
+    owner =
+      cond do
+        is_binary(parameters.owner) ->
+          parameters.owner
 
-    # FIXME: get username from auth token OR the create params
-    username = ""
+        is_binary(Keyword.get(options, :auth_token)) ->
+          {:ok, user} = ArcGIS.User.from_token(portal, Keyword.get(options, :auth_token))
+          ArcGIS.User.username(user)
+      end
+
+    default_params = %{"supportedQueryFormats" => "JSON", "owner" => owner}
+
+    params =
+      Enum.reduce(Map.from_struct(parameters), default_params, &generate_create_document/2)
+      |> :json.encode()
+      |> to_string()
+
+    post_options =
+      [
+        form: %{"outputType" => "featureService", "createParameters" => params},
+        connect_options: [timeout: @five_minutes],
+        receive_timeout: @five_minutes
+      ]
+      |> IO.inspect()
 
     folder =
       case parameters.folder_id do
@@ -41,9 +58,14 @@ defmodule ArcGIS.Feature.Service do
         id -> "/#{id}"
       end
 
-    resource = "/content/users/#{username}#{folder}/createService"
+    resource = "/content/users/#{owner}#{folder}/createService"
 
-    with request <- Portal.build_request(resource, portal: portal),
+    request_options =
+      options
+      |> Keyword.put(:is_features_query?, false)
+      |> Keyword.put(:portal, portal)
+
+    with request <- Portal.build_request(resource, request_options) |> IO.inspect(),
          {:ok, %{body: body}} <- Req.post(request, post_options) do
       body
     else
@@ -134,28 +156,30 @@ defmodule ArcGIS.Feature.Service do
     end
   end
 
-  defp generate_create_document([_, nil], acc), do: acc
-  defp generate_create_document([:capabilities, []], acc), do: acc
+  defp generate_create_document({_, nil}, acc), do: acc
+  defp generate_create_document({:capabilities, []}, acc), do: acc
 
-  defp generate_create_document([:capabilities, capabilities], acc) do
+  defp generate_create_document({:capabilities = key, capabilities}, acc) do
     capabilities_string =
       capabilities
       |> Enum.map(fn capability -> Inflex.camelize(capability) end)
       |> Enum.join(",")
 
-    Map.put(acc, "Capabilities", capabilities_string)
+    Map.put(acc, Inflex.camelize(key, :lower), capabilities_string)
   end
 
-  defp generate_create_document([key, value], acc)
+  defp generate_create_document({key, value}, acc)
        when key in [
-              :name,
+              :allow_geometry_updates,
               :description,
               :has_static_data,
               :max_record_count,
+              :name,
+              :owner,
               :service_description
             ] do
     Map.put(acc, Inflex.camelize(key, :lower), value)
   end
 
-  defp generate_create_document([_, nil], acc), do: acc
+  defp generate_create_document({_, nil}, acc), do: acc
 end
