@@ -3,6 +3,34 @@ defmodule ArcGIS.User do
 
   alias ArcGIS.Portal
   alias ArcGIS.Telemetry
+  @five_minutes 5 * 60 * 1000
+
+  @spec from_token(Portal.t(), auth_token :: String.t()) :: {:ok, map} | {:error, term}
+  @doc """
+  Given a portal and an auth token, returns the information related to the user account
+  associated with the token, if any.
+  """
+  def from_token(%Portal{} = portal, auth_token) when is_binary(auth_token) do
+    resource = "/community/self"
+
+    post_options = [
+      form: %{},
+      connect_options: [timeout: @five_minutes],
+      receive_timeout: @five_minutes
+    ]
+
+    with request <- Portal.build_request(resource, portal: portal, auth_token: auth_token),
+         {:ok, %{body: user}} <- Req.post(request, post_options) do
+      {:ok, user}
+    else
+      error ->
+        Telemetry.handle_error(error)
+    end
+  end
+
+  @spec username(map) :: String.t()
+  @doc "Returns the user name from a user map."
+  def username(%{"username" => username}), do: username
 
   @spec generate_token(
           username :: String.t(),
