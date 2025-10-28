@@ -24,7 +24,8 @@ defmodule ArcGIS.Feature.Service do
           id: String.t()
         }
 
-  @spec create(Portal.t(), CreateParameters.t(), options :: Keyword.t()) :: t()
+  @spec create(Portal.t(), CreateParameters.t(), options :: Keyword.t()) ::
+          {:ok, t()} | {:error, reason :: String.t()}
   def create(%Portal{} = portal, %CreateParameters{} = parameters, options) do
     # TODO: support the following? tags, snippet, overwrite, isView
     owner =
@@ -50,7 +51,6 @@ defmodule ArcGIS.Feature.Service do
         connect_options: [timeout: @five_minutes],
         receive_timeout: @five_minutes
       ]
-      |> IO.inspect()
 
     folder =
       case parameters.folder_id do
@@ -65,11 +65,13 @@ defmodule ArcGIS.Feature.Service do
       |> Keyword.put(:is_features_query?, false)
       |> Keyword.put(:portal, portal)
 
-    with request <- Portal.build_request(resource, request_options) |> IO.inspect(),
-         {:ok, %{body: body}} <- Req.post(request, post_options) do
-      body
+    with request <- Portal.build_request(resource, request_options),
+         {:ok, %{body: %{"itemId" => id, "serviceurl" => url}}} <- Req.post(request, post_options) do
+      service = %__MODULE__{portal: portal, id: id}
+      cache(service, url)
+      {:ok, service}
     else
-      error -> {:error, error}
+      error -> Telemetry.handle_error(error)
     end
   end
 
@@ -124,14 +126,20 @@ defmodule ArcGIS.Feature.Service do
 
     case Req.get(request) do
       {:ok, %Req.Response{body: %{"url" => url}}} when url != nil ->
-        result = URI.parse(url)
-        Cachex.put(@cache_name, cache_key(service), result)
+        result = cache(service, url)
         {:ok, result}
 
       error ->
         Telemetry.handle_error(error, url: Keyword.get(request, :url))
         error
     end
+  end
+
+  @spec cache(t(), url :: String.t()) :: URI.t()
+  defp cache(service, url) do
+    uri = URI.parse(url)
+    Cachex.put(@cache_name, cache_key(service), uri)
+    uri
   end
 
   @spec cache_key(t()) :: String.t()
