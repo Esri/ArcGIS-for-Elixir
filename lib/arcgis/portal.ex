@@ -85,6 +85,7 @@ defmodule ArcGIS.Portal do
       |> Map.merge(Keyword.get(options, :headers, %{}))
 
     [url: url, params: params, headers: headers]
+    |> Keyword.merge(Application.get_env(:arcgis, :req_defaults, []))
   end
 
   defp add_token_header(headers, nil), do: headers

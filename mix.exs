@@ -12,7 +12,8 @@ defmodule ArcGIS.MixProject do
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       docs: docs(),
-      preferred_envs: [test_watch: :test]
+      preferred_envs: [test_watch: :test],
+      elixirc_paths: elixirc_paths(Mix.env())
     ]
   end
 
@@ -24,6 +25,9 @@ defmodule ArcGIS.MixProject do
     ]
   end
 
+  defp elixirc_paths(:test), do: elixirc_paths(:dev) ++ ["test/support"]
+  defp elixirc_paths(_), do: ["lib"]
+
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
@@ -32,7 +36,8 @@ defmodule ArcGIS.MixProject do
       {:telemetry, "~> 1.0"},
       {:inflex, "~> 2.0"},
       {:ex_doc, "~> 0.34", only: :dev, runtime: false, warn_if_outdated: true},
-      {:mix_test_watch, "~> 1.0", only: [:test]}
+      {:mix_test_watch, "~> 1.0", only: [:dev, :test], runtime: false},
+      {:plug, "~> 1.0", only: [:test]}
     ]
   end
 
