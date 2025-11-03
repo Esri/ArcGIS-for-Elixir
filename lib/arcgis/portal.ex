@@ -9,6 +9,9 @@ defmodule ArcGIS.Portal do
 
   defstruct [:base_url]
 
+  @typedoc "A portal item ID"
+  @type id :: String.t()
+
   @typedoc """
   The configuration of an ArcGIS portal necessary for its use, in particular the base_url
   """
