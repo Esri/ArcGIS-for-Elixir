@@ -3,7 +3,6 @@ defmodule ArcGIS.User do
 
   alias ArcGIS.Portal
   alias ArcGIS.Telemetry
-  @five_minutes 5 * 60 * 1000
 
   @spec from_token(Portal.t(), auth_token :: String.t()) :: {:ok, map} | {:error, term}
   @doc """
@@ -15,8 +14,8 @@ defmodule ArcGIS.User do
 
     post_options = [
       form: %{},
-      connect_options: [timeout: @five_minutes],
-      receive_timeout: @five_minutes
+      connect_options: [timeout: ArcGIS.default_query_timeout()],
+      receive_timeout: ArcGIS.default_query_timeout()
     ]
 
     with request <- Portal.build_request(resource, portal: portal, auth_token: auth_token),

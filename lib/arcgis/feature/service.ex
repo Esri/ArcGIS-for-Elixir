@@ -10,7 +10,6 @@ defmodule ArcGIS.Feature.Service do
   alias __MODULE__.CreateParameters
 
   @cache_name :feature_service_urls
-  @five_minutes 5 * 60 * 1000
 
   @enforce_keys [:id]
   defstruct [:portal, :id]
@@ -48,8 +47,8 @@ defmodule ArcGIS.Feature.Service do
     post_options =
       [
         form: %{"outputType" => "featureService", "createParameters" => params},
-        connect_options: [timeout: @five_minutes],
-        receive_timeout: @five_minutes
+        connect_options: [timeout: ArcGIS.default_query_timeout()],
+        receive_timeout: ArcGIS.default_query_timeout()
       ]
 
     folder =
@@ -92,8 +91,8 @@ defmodule ArcGIS.Feature.Service do
   def post(%__MODULE__{} = service, resource, document, options \\ []) do
     post_args = [
       form: document,
-      connect_options: [timeout: @five_minutes],
-      receive_timeout: @five_minutes
+      connect_options: [timeout: ArcGIS.default_query_timeout()],
+      receive_timeout: ArcGIS.default_query_timeout()
     ]
 
     request = build_request(service, resource, options)

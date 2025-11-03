@@ -11,6 +11,8 @@ defmodule ArcGIS do
       * Fetching schema and other metadata
   """
 
+  @five_minutes 5 * 60 * 1000
+
   @typedoc """
   Data types that can be stored and retrieved from an ArcGIS feature service.
   """
@@ -33,4 +35,12 @@ defmodule ArcGIS do
   Fetches the default portal client ID, if one was set via application configuration.
   """
   def client_id, do: Application.get_env(:arcgis, :portal_client_id)
+
+  @spec default_query_timeout :: pos_integer
+  @doc """
+  Returns the configured default query timeout in millseconds. Defaults to 5 minutes.
+  """
+  def default_query_timeout do
+    Application.get_env(:arcgis, :default_query_timeoute, @five_minutes)
+  end
 end
