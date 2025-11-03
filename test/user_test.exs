@@ -4,6 +4,7 @@ defmodule ArcGIS.Test.User do
 
   test "Translates a map to a user struct" do
     Req.Test.stub(ArcGIS, fn conn ->
+      assert(conn.request_path == "/sharing/rest/community/self")
       Req.Test.json(conn, Fixtures.Network.json("user"))
     end)
 
