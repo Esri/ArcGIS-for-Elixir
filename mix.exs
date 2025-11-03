@@ -43,9 +43,11 @@ defmodule ArcGIS.MixProject do
       source_ref: "v#{@version}",
       formatters: ["html"],
       groups_for_modules: [
+        Users: [~r/ArcGIS.User.*/],
         Features: [~r/ArcGIS.Feature(?!.(Domain|Schema)).*/],
         Schemas: [~r/ArcGIS.Feature.Schema.*/],
-        Domains: [~r/ArcGIS.Feature.Domain.*/]
+        Domains: [~r/ArcGIS.Feature.Domain.*/],
+        "Utility Types": [ArcGIS.Timestamps]
       ]
     ]
   end
