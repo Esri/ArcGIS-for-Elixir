@@ -3,6 +3,67 @@ defmodule ArcGIS.User do
 
   alias ArcGIS.Portal
   alias ArcGIS.Telemetry
+  alias ArcGIS.Timestamps
+  alias ArcGIS.User.{Culture, Group, Role}
+
+  # not included:
+  #   * favGroupId
+  #   * categories
+  #   * storageQuota
+  #   * mfaEnabled
+  #   * mfaEnformcementExempt
+  #   * udn
+  #   * preferredView
+  #   * idpUsername
+  #   * emailStatus
+  defstruct [
+    :id,
+    :access,
+    :culture,
+    :description,
+    :email,
+    :groups,
+    :license,
+    :name,
+    :org_id,
+    :privileges,
+    :provider,
+    :region,
+    :role,
+    :storage_usage,
+    :tags,
+    :thumbnail,
+    :timestamps,
+    :user_type
+  ]
+
+  @type names :: %{
+          user: String.t(),
+          full: String.t(),
+          first: String.t(),
+          last: String.t()
+        }
+
+  @type t :: %__MODULE__{
+          id: Portal.id(),
+          access: String.t(),
+          culture: Culture.t(),
+          description: String.t(),
+          email: String.t(),
+          groups: [Group.t()],
+          license: String.t() | nil,
+          name: names(),
+          org_id: Portal.id(),
+          privileges: [String.t()],
+          provider: String.t(),
+          region: String.t(),
+          role: Role.t(),
+          storage_usage: non_neg_integer(),
+          tags: [String.t()],
+          thumbnail: String.t(),
+          timestamps: Timestamps.t(),
+          user_type: String.t()
+        }
 
   @spec from_token(Portal.t(), auth_token :: String.t()) :: {:ok, map} | {:error, term}
   @doc """
@@ -20,16 +81,18 @@ defmodule ArcGIS.User do
 
     with request <- Portal.build_request(resource, portal: portal, auth_token: auth_token),
          {:ok, %{body: user}} <- Req.post(request, post_options) do
-      {:ok, user}
+      {:ok, from_map(user)}
     else
       error ->
         Telemetry.handle_error(error)
     end
   end
 
-  @spec username(map) :: String.t()
-  @doc "Returns the user name from a user map."
-  def username(%{"username" => username}), do: username
+  @spec can?(t(), privilege :: String.t()) :: boolean()
+  @doc "Checks if a user has a given privilege"
+  def can?(%__MODULE__{privileges: privileges}, privilege) do
+    Enum.member?(privileges, privilege)
+  end
 
   @spec generate_token(
           username :: String.t(),
@@ -70,5 +133,48 @@ defmodule ArcGIS.User do
 
   defp referer(options) do
     Keyword.get_lazy(options, :referer, &ArcGIS.client_id/0)
+  end
+
+  defp from_map(raw) do
+    Map.get(raw, "", "")
+
+    %__MODULE__{
+      id: Map.get(raw, "id"),
+      access: Map.get(raw, "access", ""),
+      culture: Culture.new(raw),
+      description: Map.get(raw, "description", ""),
+      email: Map.get(raw, "email", ""),
+      groups: Group.new(raw),
+      name: names_from_map(raw),
+      org_id: Map.get(raw, "orgId", ""),
+      privileges: Map.get(raw, "privileges", []),
+      provider: Map.get(raw, "provider", ""),
+      # Should region be in culture?
+      region: Map.get(raw, "region", ""),
+      role: Role.new(raw),
+      storage_usage: Map.get(raw, "storageUsage", ""),
+      tags: Map.get(raw, "tags", []),
+      thumbnail: Map.get(raw, "thumbnail", []),
+      timestamps: timestamps_from_map(raw),
+      license: Map.get(raw, "userLincenseTypeId"),
+      user_type: Map.get(raw, "userType", "")
+    }
+  end
+
+  defp timestamps_from_map(raw) do
+    %Timestamps{
+      created: Map.get(raw, "created"),
+      last_access: Map.get(raw, "lastLogin"),
+      modified: Map.get(raw, "modified")
+    }
+  end
+
+  defp names_from_map(raw) do
+    %{
+      user: Map.get(raw, "username", ""),
+      full: Map.get(raw, "fullName", ""),
+      first: Map.get(raw, "firstName", ""),
+      last: Map.get(raw, "lastName", "")
+    }
   end
 end
