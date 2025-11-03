@@ -87,17 +87,6 @@ defmodule ArcGIS.Portal do
     [url: url, params: params, headers: headers]
   end
 
-  @spec is_error_response?({:error, term} | {:ok, Req.Response.t()}) :: boolean
-  @doc "Checks if the response from an ArcGIS REST query represents an error"
-  def is_error_response?({:error, _error}), do: true
-
-  def is_error_response?({:ok, %Req.Response{status: status}}) when status < 200 or status > 299,
-    do: true
-
-  def is_error_response?({:ok, %Req.Response{body: %{"error" => _error}}}), do: true
-  def is_error_response?({:ok, %Req.Response{body: %{}}}), do: true
-  def is_error_response?(_), do: false
-
   defp add_token_header(headers, nil), do: headers
 
   defp add_token_header(headers, token) do
