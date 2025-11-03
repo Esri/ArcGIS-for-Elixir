@@ -98,7 +98,7 @@ defmodule ArcGIS.Feature.Service do
     request = build_request(service, resource, options)
 
     with {:ok, %{body: body} = response} <- Req.post(request, post_args),
-         false <- ArcGIS.Portal.is_error_response?(response) do
+         false <- ArcGIS.is_error_response?(response) do
       {:ok, body}
     else
       error ->
