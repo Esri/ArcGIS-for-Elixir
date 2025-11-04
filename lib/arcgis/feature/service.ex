@@ -78,7 +78,8 @@ defmodule ArcGIS.Feature.Service do
   def get(%__MODULE__{} = service, resource, options \\ []) do
     request = build_request(service, resource, options)
 
-    with {:ok, %{body: body}} <- Req.get(request) do
+    with {:ok, %{body: body} = response} <- Req.get(request),
+         false <- ArcGIS.error_response?(response) do
       {:ok, body}
     else
       error -> Telemetry.handle_error(error)
@@ -97,7 +98,7 @@ defmodule ArcGIS.Feature.Service do
     request = build_request(service, resource, options)
 
     with {:ok, %{body: body} = response} <- Req.post(request, post_args),
-         false <- ArcGIS.is_error_response?(response) do
+         false <- ArcGIS.error_response?(response) do
       {:ok, body}
     else
       error ->
