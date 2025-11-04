@@ -165,11 +165,7 @@ defmodule ArcGIS.Feature.Service do
   defp generate_create_document({:capabilities, []}, acc), do: acc
 
   defp generate_create_document({:capabilities = key, capabilities}, acc) do
-    capabilities_string =
-      capabilities
-      |> Enum.map(fn capability -> Inflex.camelize(capability) end)
-      |> Enum.join(",")
-
+    capabilities_string = Enum.map_join(capabilities, ",", &Inflex.camelize/1)
     Map.put(acc, Inflex.camelize(key, :lower), capabilities_string)
   end
 
