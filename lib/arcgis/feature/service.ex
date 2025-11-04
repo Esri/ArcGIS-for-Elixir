@@ -130,7 +130,6 @@ defmodule ArcGIS.Feature.Service do
 
       error ->
         Telemetry.handle_error(error, url: Keyword.get(request, :url))
-        error
     end
   end
 
