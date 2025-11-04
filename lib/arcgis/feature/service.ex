@@ -62,9 +62,8 @@ defmodule ArcGIS.Feature.Service do
     request_options =
       options
       |> Keyword.put(:is_features_query?, false)
-      |> Keyword.put(:portal, portal)
 
-    with request <- Portal.build_request(resource, request_options),
+    with request <- Portal.build_request(portal, resource, request_options),
          {:ok, %{body: %{"itemId" => id, "serviceurl" => url}}} <- Req.post(request, post_options) do
       service = %__MODULE__{portal: portal, id: id}
       cache(service, url)

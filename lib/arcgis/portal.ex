@@ -41,6 +41,8 @@ defmodule ArcGIS.Portal do
           | {:where, String.t()}
   @type request_option :: portal_option | query_option
 
+  @arcgis_online_baseurl "https://arcgis.com/"
+
   @spec new(url :: String.t()) :: t()
   @doc "Create a `t:Portal.t/0` from its base URL."
   def new(url), do: %__MODULE__{base_url: URI.new!(url)}
@@ -57,7 +59,35 @@ defmodule ArcGIS.Portal do
     end
   end
 
-  @spec build_request(relative_path :: String.t(), [request_option]) ::
+  @spec default_portal :: t()
+  @doc """
+  Returns the default portal. The portal (if any) defined in the 
+  application configuration will be used, with ArcGIS Online used as the ultimate fallback.
+  """
+  def default_portal() do
+    case Application.get_env(:arcgis, :portal) do
+      %__MODULE__{} = portal -> portal
+      _ -> new(@arcgis_online_baseurl)
+    end
+  end
+
+  @spec build_request(relative_path :: String.t(), [request_option | {:portal, t()}]) ::
+          [url: String.t(), params: url_meta, headers: url_meta]
+  @doc """
+  Returns the url, parameters, and headers for an HTTP request given a path to an endpoint relative to the
+  Portal's default URL and additional options such as authentication information. 
+
+  A portal may be defined in the `options`, otherwise the default portal is used.
+
+  By default, results are requested in JSON format.
+  """
+  def build_request(relative_path, options \\ []) do
+    options
+    |> Keyword.get_lazy(:portal, &default_portal/0)
+    |> build_request(relative_path, options)
+  end
+
+  @spec build_request(portal :: t(), relative_path :: String.t(), [request_option]) ::
           [url: String.t(), params: url_meta, headers: url_meta]
   @doc """
   Returns the url, parameters, and headers for an HTTP request given a path to an endpoint relative to the
@@ -65,11 +95,11 @@ defmodule ArcGIS.Portal do
 
   By default, results are requested in JSON format.
   """
-  def build_request(relative_path, options \\ []) do
+  def build_request(%__MODULE__{} = portal, relative_path, options) do
     url =
       relative_path
       |> URI.parse()
-      |> create_sharing_api_url(options)
+      |> create_sharing_api_url(portal)
       |> to_string()
 
     params =
@@ -101,20 +131,16 @@ defmodule ArcGIS.Portal do
     Keyword.get(options, :response_format, "json")
   end
 
-  defp create_sharing_api_url(%{scheme: nil, path: relative_path}, options) do
-    options
-    |> Keyword.get(:portal, %{})
-    |> Map.get_lazy(:base_url, &base_url_fallback/0)
+  defp create_sharing_api_url(
+         %{scheme: nil, path: relative_path},
+         %__MODULE__{base_url: base_url} = _portal
+       ) do
+    base_url
     |> URI.append_path("/sharing/rest")
     |> URI.append_path(relative_path)
   end
 
-  defp create_sharing_api_url(url, _options), do: url
-
-  defp base_url_fallback do
-    Application.get_env(:arcgis, :portal)
-    |> Map.get(:base_url)
-  end
+  defp create_sharing_api_url(url, _portal), do: url
 
   @spec query_parameters(options :: [query_option], is_features_query? :: boolean) :: map
   defp query_parameters(_options, false), do: %{}
