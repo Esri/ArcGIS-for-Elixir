@@ -98,7 +98,7 @@ defmodule ArcGIS.User do
           username :: String.t(),
           password :: String.t(),
           Portal.t(),
-          options :: [Portal.request_option()]
+          options :: [Portal.request_option() | {:referer, String.t()}]
         ) ::
           String.t() | nil
   @doc """

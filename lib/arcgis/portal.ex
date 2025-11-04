@@ -26,7 +26,6 @@ defmodule ArcGIS.Portal do
           | {:headers, url_meta}
           | {:params, url_meta}
           | {:portal, t()}
-          | {:referer, String.t()}
 
   @type aggregate_type :: :avg | :count | :max | :min | :sum
   @type aggregate :: %{type: aggregate_type, field: String.t(), name: String.t()}
