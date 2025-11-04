@@ -54,4 +54,24 @@ defmodule ArcGIS do
   def default_query_timeout do
     Application.get_env(:arcgis, :default_query_timeoute, @five_minutes)
   end
+
+  @doc false
+  def get(request) do
+    with {:ok, %{body: body} = response} <- Req.get(request),
+         false <- error_response?(response) do
+      {:ok, body}
+    else
+      error -> ArcGIS.Telemetry.handle_error(error)
+    end
+  end
+
+  @doc false
+  def post(request, args) do
+    with {:ok, %{body: body} = response} <- Req.post(request, args),
+         false <- error_response?(response) do
+      {:ok, body}
+    else
+      error -> ArcGIS.Telemetry.handle_error(error)
+    end
+  end
 end

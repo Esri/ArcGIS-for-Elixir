@@ -63,27 +63,25 @@ defmodule ArcGIS.Feature.Service do
       options
       |> Keyword.put(:is_features_query?, false)
 
-    with request <- Portal.build_request(portal, resource, request_options),
-         {:ok, %{body: %{"itemId" => id, "serviceurl" => url}}} <- Req.post(request, post_options) do
-      service = %__MODULE__{portal: portal, id: id}
-      cache(service, url)
-      {:ok, service}
-    else
-      error -> Telemetry.handle_error(error)
+    request = Portal.build_request(portal, resource, request_options)
+
+    case ArcGIS.post(request, post_options) do
+      {:ok, %{"itemId" => id, "serviceurl" => url}} ->
+        service = %__MODULE__{portal: portal, id: id}
+        cache(service, url)
+        {:ok, service}
+
+      error ->
+        Telemetry.handle_error(error)
     end
   end
 
   @spec get(t(), resource :: String.t(), options :: Keyword.t()) ::
           {:ok, map} | {:error, reason :: String.t()}
   def get(%__MODULE__{} = service, resource, options \\ []) do
-    request = build_request(service, resource, options)
-
-    with {:ok, %{body: body} = response} <- Req.get(request),
-         false <- ArcGIS.error_response?(response) do
-      {:ok, body}
-    else
-      error -> Telemetry.handle_error(error)
-    end
+    service
+    |> build_request(resource, options)
+    |> ArcGIS.get()
   end
 
   @spec post(t(), resource :: String.t(), document :: Keyword.t(), options :: Keyword.t()) ::
@@ -95,15 +93,9 @@ defmodule ArcGIS.Feature.Service do
       receive_timeout: ArcGIS.default_query_timeout()
     ]
 
-    request = build_request(service, resource, options)
-
-    with {:ok, %{body: body} = response} <- Req.post(request, post_args),
-         false <- ArcGIS.error_response?(response) do
-      {:ok, body}
-    else
-      error ->
-        error
-    end
+    service
+    |> build_request(resource, options)
+    |> ArcGIS.post(post_args)
   end
 
   @spec url(t()) :: String.t()
@@ -120,11 +112,10 @@ defmodule ArcGIS.Feature.Service do
   @spec fetch_and_cache_url(t(), options :: Keyword.t()) :: {:ok, String.t()} | {:error, term}
   defp fetch_and_cache_url(service, options) do
     path = Path.join("/content/items", service.id)
-    all_options = Keyword.put(options, :portal, service.portal)
-    request = Portal.build_request(path, all_options)
+    request = Portal.build_request(service.portal, path, options)
 
-    case Req.get(request) do
-      {:ok, %Req.Response{body: %{"url" => url}}} when url != nil ->
+    case ArcGIS.get(request) do
+      {:ok, %{"url" => url}} when url != nil ->
         result = cache(service, url)
         {:ok, result}
 
@@ -155,7 +146,7 @@ defmodule ArcGIS.Feature.Service do
             url
           end
 
-        Portal.build_request(resource_url, options)
+        Portal.build_request(service.portal, resource_url, options)
 
       error ->
         error

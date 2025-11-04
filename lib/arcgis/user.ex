@@ -79,12 +79,11 @@ defmodule ArcGIS.User do
       receive_timeout: ArcGIS.default_query_timeout()
     ]
 
-    with request <- Portal.build_request(resource, portal: portal, auth_token: auth_token),
-         {:ok, %{body: user}} <- Req.post(request, post_options) do
-      {:ok, from_map(user)}
-    else
-      error ->
-        Telemetry.handle_error(error)
+    request = Portal.build_request(portal, resource, auth_token: auth_token)
+
+    case ArcGIS.post(request, post_options) do
+      {:ok, user} -> {:ok, from_map(user)}
+      error -> Telemetry.handle_error(error)
     end
   end
 
@@ -114,20 +113,17 @@ defmodule ArcGIS.User do
         referer: referer(options)
       }
 
-    query_options = Keyword.put(options, :portal, portal)
-
     post_options =
       [
         form: params,
         connect_options: [transport_opts: [verify: :verify_none]]
       ]
 
-    with request <- Portal.build_request("/generateToken", query_options),
-         {:ok, %{body: %{"token" => token}}} <- Req.post(request, post_options) do
-      {:ok, token}
-    else
-      error ->
-        Telemetry.handle_error(error)
+    request = Portal.build_request(portal, "/generateToken", options)
+
+    case ArcGIS.post(request, post_options) do
+      {:ok, %{"token" => token}} -> {:ok, token}
+      error -> error
     end
   end
 

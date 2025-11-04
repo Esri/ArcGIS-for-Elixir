@@ -50,13 +50,9 @@ defmodule ArcGIS.Portal do
   @spec self(t(), options :: [portal_option]) :: {:ok, map} | {:error, reason :: String.t()}
   @doc "Returns information about the Portal using the `self` query"
   def self(%__MODULE__{} = portal, options \\ []) do
-    request = build_request("/portals/self", Keyword.put(options, :portal, portal))
-
-    with {:ok, %{body: body}} <- Req.get(request) do
-      {:ok, body}
-    else
-      error -> Telemetry.handle_error(error)
-    end
+    portal
+    |> build_request("/portals/self", options)
+    |> ArcGIS.get()
   end
 
   @spec default_portal :: t()
