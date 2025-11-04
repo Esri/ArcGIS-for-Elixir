@@ -32,9 +32,12 @@ defmodule ArcGIS.MixProject do
   defp deps do
     [
       {:cachex, "~> 4.0"},
+      {:inflex, "~> 2.0"},
       {:req, "~> 0.5"},
       {:telemetry, "~> 1.0"},
-      {:inflex, "~> 2.0"},
+
+      # dev depencencies
+      {:credo, "~> 1.0"},
       {:ex_doc, "~> 0.34", only: :dev, runtime: false, warn_if_outdated: true},
       {:mix_test_watch, "~> 1.0", only: [:dev, :test], runtime: false},
       {:plug, "~> 1.0", only: [:test]}
