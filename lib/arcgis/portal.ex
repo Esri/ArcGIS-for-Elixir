@@ -39,6 +39,10 @@ defmodule ArcGIS.Portal do
           | {:response_format, response_format}
           | {:where, String.t()}
   @type request_option :: portal_option | query_option
+  @type request_data :: [url: String.t(), params: url_meta, headers: url_meta]
+  @type get_options :: {:selector, [term()]}
+  @type post_options :: {:selector, [term()]}
+  @type post_args :: keyword
 
   @arcgis_online_baseurl "https://arcgis.com/"
 
@@ -83,7 +87,7 @@ defmodule ArcGIS.Portal do
   end
 
   @spec build_request(portal :: t(), relative_path :: String.t(), [request_option]) ::
-          [url: String.t(), params: url_meta, headers: url_meta]
+          request_data
   @doc """
   Returns the url, parameters, and headers for an HTTP request given a path to an endpoint relative to the
   Portal's default URL and additional options such as authentication information.
@@ -112,7 +116,15 @@ defmodule ArcGIS.Portal do
     |> Keyword.merge(Application.get_env(:arcgis, :req_defaults, []))
   end
 
-  @doc false
+  @spec get(request_data, [get_options]) :: {:ok, term} | {:error, reason :: String.t()}
+  @doc """
+  Performs an HTTP GET request, checking for errors.
+
+  An optional `selector: [...]` may be passed in as an option to return
+  only part of the response. For example, `selector: ["geometry", "srid"]`
+  would return the `srid` in the `geometry` object if it exists, or an 
+  error tuple otherwise.
+  """
   def get(request, options \\ []) do
     with {:ok, %{body: body} = response} <- Req.get(request),
          false <- ArcGIS.error_response?(response) do
@@ -122,7 +134,16 @@ defmodule ArcGIS.Portal do
     end
   end
 
-  @doc false
+  @spec post(request_data, post_args, [post_options]) ::
+          {:ok, term} | {:error, reason :: String.t()}
+  @doc """
+  Performs an HTTP POST request, checking for errors.
+
+  An optional `selector: [...]` may be passed in as an option to return
+  only part of the response. For example, `selector: ["geometry", "srid"]`
+  would return the `srid` in the `geometry` object if it exists, or an 
+  error tuple otherwise.
+  """
   def post(request, args, options \\ []) do
     with {:ok, %{body: body} = response} <- Req.post(request, args),
          false <- ArcGIS.error_response?(response) do
