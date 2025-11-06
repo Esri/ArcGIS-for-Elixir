@@ -26,18 +26,9 @@ defmodule ArcGIS.Feature do
   @doc "Query features in a Feature Service layer or table"
   def query(%Service{} = feature_service, layer_id, options \\ []) do
     options = Keyword.put(options, :selector, ["features"])
-
-    case Service.get(feature_service, "/#{layer_id}/query", options) do
-      {:ok, features} ->
-        {:ok, features}
-
-      error ->
-        Telemetry.handle_error(error)
-        error
-    end
+    Service.get(feature_service, "/#{layer_id}/query", options)
   end
 
-  # TODO: should this should return :ok/:error tuples?
   @spec mutate(
           Service.t(),
           mutations :: mutations_by_layer_id,
@@ -64,21 +55,17 @@ defmodule ArcGIS.Feature do
       uploadFormat: Keyword.get(options, :upload_format, :json)
     }
 
-    options_with_params = Keyword.put(options, :params, params)
+    options_with_params =
+      options
+      |> Keyword.put(:params, params)
+      |> Keyword.put(:telemetry, %Telemetry{
+        metadata: %{service: service, action: :mutate_features}
+      })
 
     # TODO: properly support PBF formats
     document = [edits: document]
 
-    case Service.post(service, "/applyEdits", document, options_with_params) do
-      {:ok, _body} ->
-        Telemetry.handle_success(%{action: :mutate_features}, metadata: %{service: service})
-        true
-
-      {:error, _} = error ->
-        # TODO: errors are per mutation (e.g. "addResults", "deleteResults"), per layer
-        Telemetry.handle_error(error, metadata: %{service: service, action: :mutate_features})
-        false
-    end
+    Service.post(service, "/applyEdits", document, options_with_params)
   end
 
   @spec sanitize(features :: [t()], schema :: Schema.t() | nil) :: [t()]

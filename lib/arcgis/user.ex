@@ -83,7 +83,7 @@ defmodule ArcGIS.User do
 
     case Portal.post(request, post_options) do
       {:ok, user} -> {:ok, from_map(user)}
-      error -> Telemetry.handle_error(error)
+      error -> error
     end
   end
 

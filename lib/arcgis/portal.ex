@@ -4,6 +4,7 @@ defmodule ArcGIS.Portal do
   """
   require Logger
 
+  alias ArcGIS.Telemetry
   alias ArcGIS.Utils
 
   defstruct [:base_url]
@@ -126,11 +127,18 @@ defmodule ArcGIS.Portal do
   error tuple otherwise.
   """
   def get(request, options \\ []) do
+    telemetry =
+      options
+      |> Keyword.get(:telemetry, %Telemetry{})
+      |> Kernel.put_in([Access.key!(:metadata), :http_method], :get)
+      |> Kernel.put_in([Access.key!(:metadata), :url], Keyword.get(request, :url))
+
     with {:ok, %{body: body} = response} <- Req.get(request),
          false <- ArcGIS.error_response?(response) do
+      Telemetry.handle_success(telemetry)
       select(body, options)
     else
-      error -> ArcGIS.Telemetry.handle_error(error)
+      error -> Telemetry.handle_error(error, telemetry)
     end
   end
 
@@ -145,23 +153,30 @@ defmodule ArcGIS.Portal do
   error tuple otherwise.
   """
   def post(request, args, options \\ []) do
+    telemetry =
+      options
+      |> Keyword.get(:telemetry, %Telemetry{})
+      |> Kernel.put_in([Access.key!(:metadata), :http_method], :get)
+      |> Kernel.put_in([Access.key!(:metadata), :url], Keyword.get(request, :url))
+
     with {:ok, %{body: body} = response} <- Req.post(request, args),
          false <- ArcGIS.error_response?(response) do
+      Telemetry.handle_success(telemetry)
       select(body, options)
     else
-      error -> ArcGIS.Telemetry.handle_error(error)
+      error -> Telemetry.handle_error(error, telemetry)
     end
   end
 
   defp select(body, options) do
-    case Keyword.get(options, :selector) do
+    case Keyword.get(options, :selector, []) do
       selector when selector != [] ->
         case Kernel.get_in(body, selector) do
           nil -> {:error, "Not found: #{inspect(selector)}"}
           data -> {:ok, data}
         end
 
-      body ->
+      _ ->
         body
     end
   end

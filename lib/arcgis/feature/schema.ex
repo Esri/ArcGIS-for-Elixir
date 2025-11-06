@@ -26,7 +26,7 @@ defmodule ArcGIS.Feature.Schema do
          {:ok, schema} <- resolve(layers, tables) do
       {:ok, schema}
     else
-      error -> Telemetry.handle_error(error)
+      error -> error
     end
   end
 

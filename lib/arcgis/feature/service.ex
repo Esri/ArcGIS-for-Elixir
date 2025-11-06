@@ -71,8 +71,11 @@ defmodule ArcGIS.Feature.Service do
         cache(service, url)
         {:ok, service}
 
-      error ->
-        Telemetry.handle_error(error)
+      {:error, _} = error ->
+        error
+
+      other_error ->
+        Telemetry.handle_error(other_error)
     end
   end
 
@@ -104,8 +107,12 @@ defmodule ArcGIS.Feature.Service do
   """
   def url(%__MODULE__{} = service, options \\ []) do
     case Cachex.get(@cache_name, cache_key(service)) do
-      {:ok, url} when url != nil -> {:ok, url}
-      _ -> fetch_and_cache_url(service, options)
+      {:ok, url} when url != nil ->
+        Telemetry.handle_success(%Telemetry{measurements: %{service_cache_hit: 1}})
+        {:ok, url}
+
+      _ ->
+        fetch_and_cache_url(service, options)
     end
   end
 
@@ -120,7 +127,7 @@ defmodule ArcGIS.Feature.Service do
         {:ok, result}
 
       error ->
-        Telemetry.handle_error(error, url: Keyword.get(request, :url))
+        error
     end
   end
 

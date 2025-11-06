@@ -2,59 +2,56 @@ defmodule ArcGIS.Telemetry do
   @moduledoc false
   require Logger
 
-  @type handle_success_options :: [
-          {:log, boolean}
-          | {:telemetry, boolean}
-          | {:metadata, map}
-        ]
-  @spec handle_success(info :: map, handle_error_options) :: :ok
-  @doc "Standardized handling of ArcGIS response success."
-  def handle_success(info, options) do
-    metadata = Keyword.get(:metadaa, %{})
+  defstruct measurements: %{},
+            metadata: %{},
+            force_logging: false,
+            force_telemetry: false
 
-    if Application.get_env(:arcgis, :log_errors, false) or Keyword.get(options, :log) == true do
-      Logger.debug("Request SUCCEEDED:#{inspect(info)} => #{inspect(metadata)}")
+  @type t :: %__MODULE__{
+          measurements: map,
+          metadata: map,
+          force_logging: boolean,
+          force_telemetry: boolean
+        }
+
+  @spec handle_success(t()) :: :ok
+  @doc "Standardized handling of ArcGIS response success."
+  def handle_success(%__MODULE__{} = telemetry \\ %__MODULE__{}) do
+    if telemetry.force_logging or Application.get_env(:arcgis, :log_success, false) do
+      Logger.info(
+        "ArcGIS request SUCCEEDED: #{inspect(telemetry.measurements)} => #{inspect(telemetry.metadata)}"
+      )
     end
 
-    if Application.get_env(:arcgis, :telemetry, true) or Keyword.get(options, :telemetry) == true do
+    if telemetry.force_telemetry or Application.get_env(:arcgis, :telemetry, true) do
       :telemetry.execute(
         [:arcgis, :request, :success],
-        info,
-        metadata
+        telemetry.measurements,
+        telemetry.metadata
       )
     end
 
     :ok
   end
 
-  @type handle_error_options :: [
-          {:log, boolean}
-          | {:telemetry, boolean}
-          | {:metadata, map()}
-        ]
-  @spec handle_error({:error, term} | {:ok, Req.Response.t()}, handle_error_options) ::
+  @spec handle_error({:error, term} | {:ok, Req.Response.t()}, t()) ::
           {:error, String.t()}
   @doc "Standardized handling of ArcGIS response errors."
-  def handle_error(error, options \\ []) do
+  def handle_error(error, %__MODULE__{} = telemetry \\ %__MODULE__{}) do
     {:error, message, metadata} = extract_error(error)
-    metadata = Map.merge(Keyword.get(options, :metadata, %{}), metadata)
+    metadata = Map.merge(telemetry.metadata, metadata) |> Map.put(:message, message)
 
-    if Application.get_env(:arcgis, :log_errors, true) or Keyword.get(options, :log) == true do
-      Logger.warning("Request FAILED: #{inspect(metadata)} => #{inspect(message)}")
+    if telemetry.force_logging or Application.get_env(:arcgis, :log_errors, false) do
+      Logger.warning(
+        "ArcGIS request FAILED: #{inspect(telemetry.measurements)} => #{inspect(metadata)}"
+      )
     end
 
-    if Application.get_env(:arcgis, :telemetry, true) or Keyword.get(options, :telemetry) == true do
-      # add the url requested if it was provided
-      metadata =
-        case Keyword.get(options, :url) do
-          url when is_binary(url) -> Map.put(metadata, :request_url, url)
-          _ -> metadata
-        end
-
+    if telemetry.force_telemetry or Application.get_env(:arcgis, :telemetry, true) do
       :telemetry.execute(
         [:arcgis, :request, :error],
-        %{message: message},
-        metadata
+        telemetry.measurements,
+        Map.put(telemetry.metadata, :message, message)
       )
     end
 
