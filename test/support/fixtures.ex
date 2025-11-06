@@ -1,4 +1,6 @@
 defmodule ArcGIS.Test.Fixtures do
+  @moduledoc false
+
   def portal do
     ArcGIS.Portal.new("https://arcgis.com")
   end

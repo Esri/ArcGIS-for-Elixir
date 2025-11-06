@@ -21,6 +21,7 @@ defmodule ArcGIS.Utils do
     ]
 
     attr_printer = fn x ->
+      # credo:disable-for-lines:2
       IO.puts("== #{x}")
       IO.inspect(apply(modulename, :__info__, [x]))
     end
@@ -33,6 +34,7 @@ defmodule ArcGIS.Utils do
   def flush() do
     receive do
       msg ->
+        # credo:disable-for-next-line
         IO.inspect(msg)
         flush()
     after

@@ -1,4 +1,8 @@
 defmodule ArcGIS.Feature do
+  @moduledoc """
+  Access to features in an ArcGIS feature service.
+  """
+
   alias ArcGIS.Feature.Schema
   alias ArcGIS.Feature.Service
   alias ArcGIS.Telemetry
