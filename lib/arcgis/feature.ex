@@ -25,8 +25,10 @@ defmodule ArcGIS.Feature do
   @spec query(Service.t(), layer_id :: non_neg_integer(), [Portal.request_option()]) :: [t()]
   @doc "Query features in a Feature Service layer or table"
   def query(%Service{} = feature_service, layer_id, options \\ []) do
+    options = Keyword.put(options, :selector, ["features"])
+
     case Service.get(feature_service, "/#{layer_id}/query", options) do
-      %{"features" => features} ->
+      {:ok, features} ->
         {:ok, features}
 
       error ->

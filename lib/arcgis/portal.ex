@@ -4,7 +4,6 @@ defmodule ArcGIS.Portal do
   """
   require Logger
 
-  alias ArcGIS.Telemetry
   alias ArcGIS.Utils
 
   defstruct [:base_url]
@@ -52,7 +51,7 @@ defmodule ArcGIS.Portal do
   def self(%__MODULE__{} = portal, options \\ []) do
     portal
     |> build_request("/portals/self", options)
-    |> ArcGIS.get()
+    |> get()
   end
 
   @spec default_portal :: t()
@@ -111,6 +110,39 @@ defmodule ArcGIS.Portal do
 
     [url: url, params: params, headers: headers]
     |> Keyword.merge(Application.get_env(:arcgis, :req_defaults, []))
+  end
+
+  @doc false
+  def get(request, options \\ []) do
+    with {:ok, %{body: body} = response} <- Req.get(request),
+         false <- ArcGIS.error_response?(response) do
+      select(body, options)
+    else
+      error -> ArcGIS.Telemetry.handle_error(error)
+    end
+  end
+
+  @doc false
+  def post(request, args, options \\ []) do
+    with {:ok, %{body: body} = response} <- Req.post(request, args),
+         false <- ArcGIS.error_response?(response) do
+      select(body, options)
+    else
+      error -> ArcGIS.Telemetry.handle_error(error)
+    end
+  end
+
+  defp select(body, options) do
+    case Keyword.get(options, :selector) do
+      selector when selector != [] ->
+        case Kernel.get_in(body, selector) do
+          nil -> {:error, "Not found: #{inspect(selector)}"}
+          data -> {:ok, data}
+        end
+
+      body ->
+        body
+    end
   end
 
   defp add_token_header(headers, nil), do: headers

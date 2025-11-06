@@ -65,7 +65,7 @@ defmodule ArcGIS.Feature.Service do
 
     request = Portal.build_request(portal, resource, request_options)
 
-    case ArcGIS.post(request, post_options) do
+    case Portal.post(request, post_options) do
       {:ok, %{"itemId" => id, "serviceurl" => url}} ->
         service = %__MODULE__{portal: portal, id: id}
         cache(service, url)
@@ -81,7 +81,7 @@ defmodule ArcGIS.Feature.Service do
   def get(%__MODULE__{} = service, resource, options \\ []) do
     service
     |> build_request(resource, options)
-    |> ArcGIS.get()
+    |> Portal.get(options)
   end
 
   @spec post(t(), resource :: String.t(), document :: Keyword.t(), options :: Keyword.t()) ::
@@ -95,7 +95,7 @@ defmodule ArcGIS.Feature.Service do
 
     service
     |> build_request(resource, options)
-    |> ArcGIS.post(post_args)
+    |> Portal.post(post_args, options)
   end
 
   @spec url(t()) :: String.t()
@@ -114,8 +114,8 @@ defmodule ArcGIS.Feature.Service do
     path = Path.join("/content/items", service.id)
     request = Portal.build_request(service.portal, path, options)
 
-    case ArcGIS.get(request) do
-      {:ok, %{"url" => url}} when url != nil ->
+    case Portal.get(request, selector: ["url"]) do
+      {:ok, url} ->
         result = cache(service, url)
         {:ok, result}
 
