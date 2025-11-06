@@ -177,7 +177,7 @@ defmodule ArcGIS.Portal do
         end
 
       _ ->
-        body
+        {:ok, body}
     end
   end
 
