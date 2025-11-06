@@ -2,7 +2,6 @@ defmodule ArcGIS.User do
   @moduledoc "User accounts hosted by an ArcGIS organisation."
 
   alias ArcGIS.Portal
-  alias ArcGIS.Telemetry
   alias ArcGIS.Timestamps
   alias ArcGIS.User.{Culture, Group, Role}
 

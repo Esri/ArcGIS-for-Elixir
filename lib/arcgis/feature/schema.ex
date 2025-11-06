@@ -5,7 +5,6 @@ defmodule ArcGIS.Feature.Schema do
   alias ArcGIS.Feature.Domain
   alias ArcGIS.Feature.Schema.Field
   alias ArcGIS.Feature.Service
-  alias ArcGIS.Telemetry
 
   @typedoc "Description of the storage for a table or layer"
   @type store :: %{
