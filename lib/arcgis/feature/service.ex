@@ -82,9 +82,10 @@ defmodule ArcGIS.Feature.Service do
   @spec get(t(), resource :: String.t(), options :: Keyword.t()) ::
           {:ok, map} | {:error, reason :: String.t()}
   def get(%__MODULE__{} = service, resource, options \\ []) do
-    service
-    |> build_request(resource, options)
-    |> Portal.get(options)
+    case build_request(service, resource, options) do
+      {:error, _} = error -> error
+      request -> Portal.get(request, options)
+    end
   end
 
   @spec post(t(), resource :: String.t(), document :: Keyword.t(), options :: Keyword.t()) ::
@@ -96,9 +97,10 @@ defmodule ArcGIS.Feature.Service do
       receive_timeout: ArcGIS.default_query_timeout()
     ]
 
-    service
-    |> build_request(resource, options)
-    |> Portal.post(post_args, options)
+    case build_request(service, resource, options) do
+      {:error, _} = error -> error
+      request -> Portal.post(request, post_args, options)
+    end
   end
 
   @spec url(t()) :: String.t()
