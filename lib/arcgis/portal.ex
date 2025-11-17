@@ -7,16 +7,22 @@ defmodule ArcGIS.Portal do
   alias ArcGIS.Telemetry
   alias ArcGIS.Utils
 
-  defstruct [:base_url]
+  @enforce_keys [:base_url]
+  defstruct [:base_url, type: :unknown, version: :unknown]
 
   @typedoc "A portal item ID"
   @type id :: String.t()
+
+  @type portal_type :: :online | :enterprise | :unknown
+  @type portal_version :: {year :: number, release :: number} | :unknown
 
   @typedoc """
   The configuration of an ArcGIS portal necessary for its use, in particular the base_url
   """
   @type t :: %__MODULE__{
-          base_url: URI.t()
+          base_url: URI.t(),
+          type: portal_type,
+          version: portal_version
         }
 
   @type url_meta :: %{String.t() => String.t()}
@@ -50,6 +56,24 @@ defmodule ArcGIS.Portal do
   @spec new(url :: String.t()) :: t()
   @doc "Create a `t:Portal.t/0` from its base URL."
   def new(url), do: %__MODULE__{base_url: URI.new!(url)}
+
+  @spec discover(t(), options :: [portal_option]) :: {:ok, t()} | {:error, reason :: String.t()}
+  @doc """
+    Discovers versions, deployment type, etc. about a portal and returns a new `%Portal{}` with this information
+  """
+  def discover(%__MODULE__{} = portal, options \\ []) do
+    case self(portal, options) do
+      {:ok, self} ->
+        %__MODULE__{
+          portal
+          | type: type_from_self(self),
+            version: version_from_self(self)
+        }
+
+      error ->
+        error
+    end
+  end
 
   @spec self(t(), options :: [portal_option]) :: {:ok, map} | {:error, reason :: String.t()}
   @doc "Returns information about the Portal using the `self` query"
@@ -256,4 +280,33 @@ defmodule ArcGIS.Portal do
 
   defp out_fields(nil), do: "*"
   defp out_fields(fields), do: Enum.join(fields, ",")
+
+  defp version_from_self(%{"currentVersion" => version}) do
+    with [year_string, release_string] <- String.split(version, "."),
+         year when not is_nil(year) <- Utils.to_integer(year_string),
+         release when not is_nil(release) <- Utils.to_integer(release_string) do
+      {year, release}
+    else
+      _ -> :unknown
+    end
+  end
+
+  defp version_from_self(_), do: :unknown
+
+  defp type_from_self(%{"portalDeploymentType" => type}) do
+    case type do
+      "ArcGISEnterprise" -> :enterprise
+      _ -> :unknown
+    end
+  end
+
+  defp type_from_self(%{"portalHostname" => hostname}) do
+    if String.ends_with?(hostname, "arcgis.com") do
+      :online
+    else
+      :unknown
+    end
+  end
+
+  defp type_from_self(_), do: :unknown
 end
