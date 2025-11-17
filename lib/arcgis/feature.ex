@@ -101,11 +101,11 @@ defmodule ArcGIS.Feature do
     Map.put(arcgis_mutation, :deletes, Map.get(mutations, :delete, []))
   end
 
-  defp sanitize_feature(%{"attributes" => attributes} = feature, _schema) do
-    %{feature | "attributes" => sanitize_attributes(attributes)}
+  defp sanitize_feature(%{"attributes" => attributes} = feature, schema) do
+    %{feature | "attributes" => sanitize_attributes(attributes, schema)}
   end
 
-  defp sanitize_attributes(attributes) do
+  defp sanitize_attributes(attributes, _schema) do
     # TODO: schema adherence
     # TODO: domain support
     # TODO: global ID brace wrapping
