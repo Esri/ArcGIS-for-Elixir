@@ -64,14 +64,13 @@ defmodule ArcGIS.Portal do
   def discover(%__MODULE__{} = portal, options \\ []) do
     case self(portal, options) do
       {:ok, self} ->
-       {
-        :ok,
-        %__MODULE__{
-          portal
-          | type: type_from_self(self),
-            version: version_from_self(self)
-
-        }
+        {
+          :ok,
+          %__MODULE__{
+            portal
+            | type: type_from_self(self),
+              version: version_from_self(self)
+          }
         }
 
       error ->
