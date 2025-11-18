@@ -8,7 +8,7 @@ defmodule ArcGIS.Portal do
   alias ArcGIS.Utils
 
   @enforce_keys [:base_url]
-  defstruct [:base_url, type: :unknown, version: :unknown]
+  defstruct [:base_url, :help_url, type: :unknown, version: :unknown]
 
   @typedoc "A portal item ID"
   @type id :: String.t()
@@ -21,6 +21,7 @@ defmodule ArcGIS.Portal do
   """
   @type t :: %__MODULE__{
           base_url: URI.t(),
+          help_url: URI.t() | :unknown,
           type: portal_type,
           version: portal_version
         }
@@ -69,7 +70,8 @@ defmodule ArcGIS.Portal do
           %__MODULE__{
             portal
             | type: type_from_self(self),
-              version: version_from_self(self)
+              version: version_from_self(self),
+              help_url: help_url_from_self(self)
           }
         }
 
@@ -312,4 +314,13 @@ defmodule ArcGIS.Portal do
   end
 
   defp type_from_self(_), do: :unknown
+
+  defp help_url_from_self(self) do
+    with %{"helpBase" => url_string} <- self,
+         {:ok, uri} <- URI.new(url_string) do
+      uri
+    else
+      _ -> :unknown
+      end
+end
 end
