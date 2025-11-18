@@ -59,15 +59,19 @@ defmodule ArcGIS.Portal do
 
   @spec discover(t(), options :: [portal_option]) :: {:ok, t()} | {:error, reason :: String.t()}
   @doc """
-    Discovers versions, deployment type, etc. about a portal and returns a new `%Portal{}` with this information
+  Discovers versions, deployment type, etc. about a portal and returns a new `%Portal{}` with this information
   """
   def discover(%__MODULE__{} = portal, options \\ []) do
     case self(portal, options) do
       {:ok, self} ->
+       {
+        :ok,
         %__MODULE__{
           portal
           | type: type_from_self(self),
             version: version_from_self(self)
+
+        }
         }
 
       error ->
@@ -85,7 +89,7 @@ defmodule ArcGIS.Portal do
 
   @spec default_portal :: t()
   @doc """
-  Returns the default portal. The portal (if any) defined in the 
+  Returns the default portal. The portal (if any) defined in the
   application configuration will be used, with ArcGIS Online used as the ultimate fallback.
   """
   def default_portal() do
@@ -99,7 +103,7 @@ defmodule ArcGIS.Portal do
           [url: String.t(), params: url_meta, headers: url_meta]
   @doc """
   Returns the url, parameters, and headers for an HTTP request given a path to an endpoint relative to the
-  Portal's default URL and additional options such as authentication information. 
+  Portal's default URL and additional options such as authentication information.
 
   A portal may be defined in the `options`, otherwise the default portal is used.
 
@@ -147,7 +151,7 @@ defmodule ArcGIS.Portal do
 
   An optional `selector: [...]` may be passed in as an option to return
   only part of the response. For example, `selector: ["geometry", "srid"]`
-  would return the `srid` in the `geometry` object if it exists, or an 
+  would return the `srid` in the `geometry` object if it exists, or an
   error tuple otherwise.
   """
   def get(request, options \\ []) do
@@ -173,7 +177,7 @@ defmodule ArcGIS.Portal do
 
   An optional `selector: [...]` may be passed in as an option to return
   only part of the response. For example, `selector: ["geometry", "srid"]`
-  would return the `srid` in the `geometry` object if it exists, or an 
+  would return the `srid` in the `geometry` object if it exists, or an
   error tuple otherwise.
   """
   def post(request, args, options \\ []) do
