@@ -1,8 +1,15 @@
 defmodule ArcGIS.Test.Fixtures do
   @moduledoc false
 
-  def portal do
+  def portal(which \\ :base)
+  def portal(:base) do
     ArcGIS.Portal.new("https://arcgis.com")
+  end
+
+  def portal(:discovered) do
+    portal(:base)
+    |> Map.put(:type, :online)
+    |> Map.put(:version, {2025, 3})
   end
 
   def user do
