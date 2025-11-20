@@ -88,6 +88,42 @@ defmodule ArcGIS.Portal do
     |> get()
   end
 
+  @type portal_item_search_terms :: %{
+          search_text: String.t(),
+          keywords: [{key :: String.t(), value :: String.t()}],
+          type: type :: String.t() | {type :: String.t(), keywords :: String.t()},
+          owner: String.t()
+        }
+
+  @spec find_item(t, portal_item_search_terms, options :: [portal_option]) ::
+          {:ok, map} | {:error, reason :: String.t()}
+  def find_item(%__MODULE__{} = portal, search_terms, options \\ []) do
+    query =
+      []
+      |> add_portal_item_search_keywords(search_terms)
+      |> add_portal_item_search_text(search_terms)
+      |> add_portal_item_type(search_terms)
+      |> add_portal_item_owner(search_terms)
+      |> Enum.join(" AND ")
+
+    all_options =
+      options
+      |> Keyword.put(:is_features_query?, false)
+      |> Keyword.put(:params, %{q: query})
+
+    portal
+    |> build_request("/search", all_options)
+    |> get()
+  end
+
+  @spec get_item(t(), id :: String.t(), options :: [portal_option]) ::
+          {:ok, map} | {:error, reason :: String.t()}
+  def get_item(%__MODULE__{} = portal, id, options \\ []) when is_binary(id) do
+    portal
+    |> build_request("/content/items/#{id}", options)
+    |> get()
+  end
+
   @spec default_portal :: t()
   @doc """
   Returns the default portal. The portal (if any) defined in the
@@ -162,8 +198,8 @@ defmodule ArcGIS.Portal do
       |> Kernel.put_in([Access.key!(:metadata), :http_method], :get)
       |> Kernel.put_in([Access.key!(:metadata), :url], Keyword.get(request, :url))
 
-    with {:ok, %{body: body} = response} <- Req.get(request),
-         false <- ArcGIS.error_response?(response) do
+    with {:ok, %{body: body}} = response <- Req.get(request),
+         :noerror <- ArcGIS.check_for_error(response) do
       Telemetry.handle_success(telemetry)
       select(body, options)
     else
@@ -188,8 +224,8 @@ defmodule ArcGIS.Portal do
       |> Kernel.put_in([Access.key!(:metadata), :http_method], :get)
       |> Kernel.put_in([Access.key!(:metadata), :url], Keyword.get(request, :url))
 
-    with {:ok, %{body: body} = response} <- Req.post(request, args),
-         false <- ArcGIS.error_response?(response) do
+    with {:ok, %{body: body}} = response <- Req.post(request, args),
+         :noerror <- ArcGIS.check_for_error(response) do
       Telemetry.handle_success(telemetry)
       select(body, options)
     else
@@ -321,6 +357,35 @@ defmodule ArcGIS.Portal do
       uri
     else
       _ -> :unknown
-      end
-end
+    end
+  end
+
+  defp add_portal_item_search_keywords(acc, search_terms) do
+    Map.get(search_terms, :keywords, [])
+    |> Enum.reduce(acc, fn {key, value}, acc ->
+      ["#{key}:\"#{value}\"" | acc]
+    end)
+  end
+
+  defp add_portal_item_search_text(acc, search_terms) do
+    case Map.get(search_terms, :search_text) do
+      nil -> acc
+      value -> [value | acc]
+    end
+  end
+
+  defp add_portal_item_type(acc, search_terms) do
+    case Map.get(search_terms, :type) do
+      nil -> acc
+      {type, keywords} -> ["type:\"#{type}\"", "typekeywords:\"#{keywords}\"" | acc]
+      type -> ["type:\"#{type}\"" | acc]
+    end
+  end
+
+  defp add_portal_item_owner(acc, search_terms) do
+    case Map.get(search_terms, :owner) do
+      nil -> acc
+      value -> ["owner:#{value}" | acc]
+    end
+  end
 end
