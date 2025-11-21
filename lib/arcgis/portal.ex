@@ -167,7 +167,6 @@ defmodule ArcGIS.Portal do
 
     with {:ok, %{body: body}} = response <- Req.get(request),
          :noerror <- ArcGIS.check_for_error(response) do
-      IO.inspect(Map.keys(body))
       Telemetry.handle_success(telemetry)
       select(body, options)
     else
