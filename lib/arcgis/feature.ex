@@ -28,8 +28,9 @@ defmodule ArcGIS.Feature do
 
   @spec query(Service.t(), layer_id :: non_neg_integer(), [Portal.request_option()]) :: [t()]
   @doc "Query features in a Feature Service layer or table"
-  def query(%Service{} = feature_service, layer_id, options \\ []) do
-    Service.get(feature_service, "/#{layer_id}/query", options)
+  def query(%Service{} = feature_service, layer_id, options \\ [])
+      when is_number(layer_id) and layer_id >= 0 do
+    Service.post(feature_service, "/#{layer_id}/query", [], options)
   end
 
   @spec mutate(

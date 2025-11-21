@@ -78,9 +78,7 @@ defmodule ArcGIS.User do
       receive_timeout: ArcGIS.default_query_timeout()
     ]
 
-    request = Portal.build_request(portal, resource, auth_token: auth_token)
-
-    case Portal.post(request, post_options) do
+    case Portal.post(portal, resource, post_options, auth_token: auth_token) do
       {:ok, user} -> {:ok, from_map(user)}
       error -> error
     end
@@ -104,8 +102,6 @@ defmodule ArcGIS.User do
   pass in `referer` value via the `options` parameter.
   """
   def generate_token(username, password, %Portal{} = portal, options \\ []) do
-    request = Portal.build_request(portal, "/generateToken", options)
-
     params =
       %{
         username: username,
@@ -122,7 +118,7 @@ defmodule ArcGIS.User do
 
     options = [selector: ["token"]]
 
-    case Portal.post(request, post_data, options) do
+    case Portal.post(portal, "/generateToken", post_data, options) do
       {:ok, token} -> {:ok, token}
       error -> error
     end

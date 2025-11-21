@@ -63,9 +63,7 @@ defmodule ArcGIS.Feature.Service do
       options
       |> Keyword.put(:is_features_query?, false)
 
-    request = Portal.build_request(portal, resource, request_options)
-
-    case Portal.post(request, post_options) do
+    case Portal.post(portal, resource, post_options, request_options) do
       {:ok, %{"itemId" => id, "serviceurl" => url}} ->
         service = %__MODULE__{portal: portal, id: id}
         cache(service, url)
@@ -82,9 +80,9 @@ defmodule ArcGIS.Feature.Service do
   @spec get(t(), resource :: String.t(), options :: Keyword.t()) ::
           {:ok, map} | {:error, reason :: String.t()}
   def get(%__MODULE__{} = service, resource, options \\ []) do
-    case build_request(service, resource, options) do
+    case resource_url(service, resource, options) do
       {:error, _} = error -> error
-      request -> Portal.get(request, options)
+      url -> Portal.get(service.portal, url, options)
     end
   end
 
@@ -97,9 +95,9 @@ defmodule ArcGIS.Feature.Service do
       receive_timeout: ArcGIS.default_query_timeout()
     ]
 
-    case build_request(service, resource, options) do
+    case resource_url(service, resource, options) do
       {:error, _} = error -> error
-      request -> Portal.post(request, post_args, options)
+      url -> Portal.post(service.portal, url, post_args, options)
     end
   end
 
@@ -120,10 +118,7 @@ defmodule ArcGIS.Feature.Service do
 
   @spec fetch_and_cache_url(t(), options :: Keyword.t()) :: {:ok, String.t()} | {:error, term}
   defp fetch_and_cache_url(service, options) do
-    path = Path.join("/content/items", service.id)
-    request = Portal.build_request(service.portal, path, options)
-
-    case Portal.get(request, Keyword.put(options, :selector, ["url"])) do
+    case Portal.get(service.portal, "/content/items", Keyword.put(options, :selector, ["url"])) do
       {:ok, url} ->
         result = cache(service, url)
         {:ok, result}
@@ -145,17 +140,14 @@ defmodule ArcGIS.Feature.Service do
     id <> "@" <> url.host
   end
 
-  defp build_request(service, resource, options) do
+  defp resource_url(service, resource, options) do
     case url(service, options) do
       {:ok, url} ->
-        resource_url =
-          if resource != nil do
-            URI.append_path(url, resource)
-          else
-            url
-          end
-
-        Portal.build_request(service.portal, resource_url, options)
+        if resource != nil do
+          URI.append_path(url, resource)
+        else
+          url
+        end
 
       error ->
         error

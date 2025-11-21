@@ -8,7 +8,7 @@ defmodule ArcGIS.Portal do
   alias ArcGIS.Utils
 
   @enforce_keys [:base_url]
-  defstruct [:base_url, :help_url, type: :unknown, version: :unknown]
+  defstruct [:base_url, :help_url, type: :unknown, version: :unknown, verify_tls: true]
 
   @typedoc "A portal item ID"
   @type id :: String.t()
@@ -23,7 +23,8 @@ defmodule ArcGIS.Portal do
           base_url: URI.t(),
           help_url: URI.t() | :unknown,
           type: portal_type,
-          version: portal_version
+          version: portal_version,
+          verify_tls: boolean
         }
 
   @type url_meta :: %{String.t() => String.t()}
@@ -48,8 +49,8 @@ defmodule ArcGIS.Portal do
           | {:where, String.t()}
   @type request_option :: portal_option | query_option
   @type request_data :: [url: String.t(), params: url_meta, headers: url_meta]
-  @type get_options :: {:selector, [term()]} | {:tls_verify_none, boolean}
-  @type post_options :: {:selector, [term()]} | {:tls_verify_none, boolean}
+  @type get_options :: {:selector, [term()]} | {:verify_tls, boolean}
+  @type post_options :: {:selector, [term()]} | {:verify_tls, boolean}
   @type post_args :: keyword
 
   @arcgis_online_baseurl "https://arcgis.com/"
@@ -83,9 +84,7 @@ defmodule ArcGIS.Portal do
   @spec self(t(), options :: [portal_option]) :: {:ok, map} | {:error, reason :: String.t()}
   @doc "Returns information about the Portal using the `self` query"
   def self(%__MODULE__{} = portal, options \\ []) do
-    portal
-    |> build_request("/portals/self", options)
-    |> get()
+    get(portal, "/portals/self", options)
   end
 
   @spec default_portal :: t()
@@ -100,53 +99,7 @@ defmodule ArcGIS.Portal do
     end
   end
 
-  @spec build_request(relative_path :: String.t(), [request_option | {:portal, t()}]) ::
-          [url: String.t(), params: url_meta, headers: url_meta]
-  @doc """
-  Returns the url, parameters, and headers for an HTTP request given a path to an endpoint relative to the
-  Portal's default URL and additional options such as authentication information.
-
-  A portal may be defined in the `options`, otherwise the default portal is used.
-
-  By default, results are requested in JSON format.
-  """
-  def build_request(relative_path, options \\ []) do
-    options
-    |> Keyword.get_lazy(:portal, &default_portal/0)
-    |> build_request(relative_path, options)
-  end
-
-  @spec build_request(portal :: t(), relative_path :: String.t(), [request_option]) ::
-          request_data
-  @doc """
-  Returns the url, parameters, and headers for an HTTP request given a path to an endpoint relative to the
-  Portal's default URL and additional options such as authentication information.
-
-  By default, results are requested in JSON format.
-  """
-  def build_request(%__MODULE__{} = portal, relative_path, options) do
-    url =
-      relative_path
-      |> URI.parse()
-      |> create_sharing_api_url(portal)
-      |> to_string()
-
-    params =
-      query_parameters(options, Keyword.get(options, :is_features_query?, true))
-      |> Map.put(:clientId, client_id(options))
-      |> Map.put(:f, response_format(options))
-      |> Map.merge(Keyword.get(options, :params, %{}))
-
-    headers =
-      %{}
-      |> add_token_header(Keyword.get(options, :auth_token))
-      |> Map.merge(Keyword.get(options, :headers, %{}))
-
-    [url: url, params: params, headers: headers]
-    |> Keyword.merge(Application.get_env(:arcgis, :req_defaults, []))
-  end
-
-  @spec get(request_data, [get_options]) ::
+  @spec get(t(), request_data, [get_options]) ::
           {:ok, Portal.ResultSet.t()} | {:ok, term} | {:error, reason :: String.t()}
   @doc """
   Performs an HTTP GET request, checking for errors.
@@ -158,14 +111,18 @@ defmodule ArcGIS.Portal do
 
   If the results are paged, then a map with the next offset and results is returned.
   """
-  def get(request, options \\ []) do
+  def get(portal, resource, options \\ []) do
+    request = build_request(portal, resource, options)
+
     telemetry =
       options
       |> Keyword.get(:telemetry, %Telemetry{})
       |> Kernel.put_in([Access.key!(:metadata), :http_method], :get)
       |> Kernel.put_in([Access.key!(:metadata), :url], Keyword.get(request, :url))
 
-    with {:ok, %{body: body}} = response <- Req.get(request, transport_options(options)),
+    all_args = add_transport_options([], portal, options)
+
+    with {:ok, %{body: body}} = response <- Req.get(request, all_args),
          :noerror <- ArcGIS.check_for_error(response) do
       Telemetry.handle_success(telemetry)
       select(body, options)
@@ -174,14 +131,19 @@ defmodule ArcGIS.Portal do
     end
   end
 
-  defp transport_options(options) do
-    case Keyword.get(options, :tls_verify_none) do
-      true -> [connect_options: [transport_opts: [verify: :verify_none]]]
-      _ -> []
+  defp add_transport_options(args, portal, options) do
+    no_tls =
+      portal.verify_tls === false or
+        Keyword.get(options, :verify_tls) === false
+
+    if no_tls do
+      Keyword.put(args, :connect_options, transport_opts: [verify: :verify_none])
+    else
+      args
     end
   end
 
-  @spec post(request_data, post_args, [post_options]) ::
+  @spec post(t(), request_data, post_args, [post_options]) ::
           {:ok, Portal.ResultSet.t()} | {:ok, term} | {:error, reason :: String.t()}
   @doc """
   Performs an HTTP POST request, checking for errors.
@@ -191,14 +153,18 @@ defmodule ArcGIS.Portal do
   would return the `srid` in the `geometry` object if it exists, or an
   error tuple otherwise.
   """
-  def post(request, args, options \\ []) do
+  def post(portal, resource, args, options \\ []) do
+    request = build_request(portal, resource, options)
+
     telemetry =
       options
       |> Keyword.get(:telemetry, %Telemetry{})
       |> Kernel.put_in([Access.key!(:metadata), :http_method], :get)
       |> Kernel.put_in([Access.key!(:metadata), :url], Keyword.get(request, :url))
 
-    with {:ok, %{body: body}} = response <- Req.post(request, args),
+    all_args = add_transport_options(args, portal, options)
+
+    with {:ok, %{body: body}} = response <- Req.post(request, all_args),
          :noerror <- ArcGIS.check_for_error(response) do
       Telemetry.handle_success(telemetry)
       select(body, options)
@@ -221,7 +187,7 @@ defmodule ArcGIS.Portal do
   end
 
   defp handle_paged_body(
-         %{"exceededTransferLimit" => more?, "features" => results} = page,
+         %{"objectIdFieldName" => _, "features" => results} = page,
          options
        ) do
     offset = Keyword.get(options, :offset, 0)
@@ -235,7 +201,7 @@ defmodule ArcGIS.Portal do
       results: results,
       next_offset: offset + Enum.count(results),
       offset: offset,
-      more?: more?,
+      more?: Map.get(page, "exceededTransferLimit", false),
       spatialReference: spatialReference
     }
   end
@@ -253,6 +219,34 @@ defmodule ArcGIS.Portal do
   end
 
   defp handle_paged_body(body, _options), do: body
+
+  @spec build_request(portal :: t(), relative_path :: String.t(), [request_option]) ::
+          request_data
+  # Returns the url, parameters, and headers for an HTTP request given a path to an endpoint relative to the
+  # Portal's default URL and additional options such as authentication information.
+  #
+  # By default, results are requested in JSON format.
+  defp build_request(%__MODULE__{} = portal, relative_path, options) do
+    url =
+      relative_path
+      |> URI.parse()
+      |> create_sharing_api_url(portal)
+      |> to_string()
+
+    params =
+      query_parameters(options, Keyword.get(options, :is_features_query?, true))
+      |> Map.put(:clientId, client_id(options))
+      |> Map.put(:f, response_format(options))
+      |> Map.merge(Keyword.get(options, :params, %{}))
+
+    headers =
+      %{}
+      |> add_token_header(Keyword.get(options, :auth_token))
+      |> Map.merge(Keyword.get(options, :headers, %{}))
+
+    [url: url, params: params, headers: headers]
+    |> Keyword.merge(Application.get_env(:arcgis, :req_defaults, []))
+  end
 
   defp add_token_header(headers, nil), do: headers
 

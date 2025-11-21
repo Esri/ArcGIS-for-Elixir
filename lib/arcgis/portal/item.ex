@@ -23,18 +23,19 @@ defmodule ArcGIS.Portal.Item do
       options
       |> Keyword.put(:is_features_query?, false)
       |> Keyword.put(:params, %{q: query})
+      |> Keyword.put(:transform, &to_struct/1)
 
-    portal
-    |> Portal.build_request("/search", all_options)
-    |> Portal.get()
+    Portal.get(portal, "/search", all_options)
   end
 
   @spec get(Portal.t(), id :: String.t(), options :: [Portal.portal_option()]) ::
           {:ok, map} | {:error, reason :: String.t()}
   def get(%Portal{} = portal, id, options \\ []) when is_binary(id) do
-    portal
-    |> Portal.build_request("/content/items/#{id}", options)
-    |> Portal.get()
+    Portal.get(portal, "/content/items/#{id}", options)
+  end
+
+  def to_struct(arcgis_map) do
+    arcgis_map
   end
 
   defp add_portal_item_search_keywords(acc, search_terms) do
