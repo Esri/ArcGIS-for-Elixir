@@ -131,18 +131,6 @@ defmodule ArcGIS.Portal do
     end
   end
 
-  defp add_transport_options(args, portal, options) do
-    no_tls =
-      portal.verify_tls === false or
-        Keyword.get(options, :verify_tls) === false
-
-    if no_tls do
-      Keyword.put(args, :connect_options, transport_opts: [verify: :verify_none])
-    else
-      args
-    end
-  end
-
   @spec post(t(), request_data, post_args, [post_options]) ::
           {:ok, Portal.ResultSet.t()} | {:ok, term} | {:error, reason :: String.t()}
   @doc """
@@ -170,6 +158,18 @@ defmodule ArcGIS.Portal do
       select(body, options)
     else
       error -> Telemetry.handle_error(error, telemetry)
+    end
+  end
+
+  defp add_transport_options(args, portal, options) do
+    no_tls =
+      portal.verify_tls === false or
+        Keyword.get(options, :verify_tls) === false
+
+    if no_tls do
+      Keyword.put(args, :connect_options, transport_opts: [verify: :verify_none])
+    else
+      args
     end
   end
 
