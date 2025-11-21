@@ -245,7 +245,7 @@ defmodule ArcGIS.Portal do
     }
   end
 
-  defp handle_paged_body(body), do: body
+  defp handle_paged_body(body, _options), do: body
 
   defp add_token_header(headers, nil), do: headers
 
