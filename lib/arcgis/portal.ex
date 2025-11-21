@@ -88,42 +88,6 @@ defmodule ArcGIS.Portal do
     |> get()
   end
 
-  @type portal_item_search_terms :: %{
-          search_text: String.t(),
-          keywords: [{key :: String.t(), value :: String.t()}],
-          type: type :: String.t() | {type :: String.t(), keywords :: String.t()},
-          owner: String.t()
-        }
-
-  @spec find_item(t, portal_item_search_terms, options :: [portal_option]) ::
-          {:ok, map} | {:error, reason :: String.t()}
-  def find_item(%__MODULE__{} = portal, search_terms, options \\ []) do
-    query =
-      []
-      |> add_portal_item_search_keywords(search_terms)
-      |> add_portal_item_search_text(search_terms)
-      |> add_portal_item_type(search_terms)
-      |> add_portal_item_owner(search_terms)
-      |> Enum.join(" AND ")
-
-    all_options =
-      options
-      |> Keyword.put(:is_features_query?, false)
-      |> Keyword.put(:params, %{q: query})
-
-    portal
-    |> build_request("/search", all_options)
-    |> get()
-  end
-
-  @spec get_item(t(), id :: String.t(), options :: [portal_option]) ::
-          {:ok, map} | {:error, reason :: String.t()}
-  def get_item(%__MODULE__{} = portal, id, options \\ []) when is_binary(id) do
-    portal
-    |> build_request("/content/items/#{id}", options)
-    |> get()
-  end
-
   @spec default_portal :: t()
   @doc """
   Returns the default portal. The portal (if any) defined in the
@@ -182,7 +146,8 @@ defmodule ArcGIS.Portal do
     |> Keyword.merge(Application.get_env(:arcgis, :req_defaults, []))
   end
 
-  @spec get(request_data, [get_options]) :: {:ok, term} | {:error, reason :: String.t()}
+  @spec get(request_data, [get_options]) ::
+          {:ok, Portal.ResultSet.t()} | {:ok, term} | {:error, reason :: String.t()}
   @doc """
   Performs an HTTP GET request, checking for errors.
 
@@ -190,6 +155,8 @@ defmodule ArcGIS.Portal do
   only part of the response. For example, `selector: ["geometry", "srid"]`
   would return the `srid` in the `geometry` object if it exists, or an
   error tuple otherwise.
+
+  If the results are paged, then a map with the next offset and results is returned.
   """
   def get(request, options \\ []) do
     telemetry =
@@ -200,6 +167,7 @@ defmodule ArcGIS.Portal do
 
     with {:ok, %{body: body}} = response <- Req.get(request),
          :noerror <- ArcGIS.check_for_error(response) do
+      IO.inspect(Map.keys(body))
       Telemetry.handle_success(telemetry)
       select(body, options)
     else
@@ -208,7 +176,7 @@ defmodule ArcGIS.Portal do
   end
 
   @spec post(request_data, post_args, [post_options]) ::
-          {:ok, term} | {:error, reason :: String.t()}
+          {:ok, Portal.ResultSet.t()} | {:ok, term} | {:error, reason :: String.t()}
   @doc """
   Performs an HTTP POST request, checking for errors.
 
@@ -242,9 +210,20 @@ defmodule ArcGIS.Portal do
         end
 
       _ ->
-        {:ok, body}
+        {:ok, handle_paged_body(body)}
     end
   end
+
+  defp handle_paged_body(%{"results" => results, "nextStart" => offset, "start" => start} = page) do
+    %ArcGIS.Portal.ResultSet{
+      results: results,
+      next_offset: offset,
+      offset: start,
+      more?: start + Enum.count(results) < page["total"]
+    }
+  end
+
+  defp handle_paged_body(body), do: body
 
   defp add_token_header(headers, nil), do: headers
 
@@ -357,35 +336,6 @@ defmodule ArcGIS.Portal do
       uri
     else
       _ -> :unknown
-    end
-  end
-
-  defp add_portal_item_search_keywords(acc, search_terms) do
-    Map.get(search_terms, :keywords, [])
-    |> Enum.reduce(acc, fn {key, value}, acc ->
-      ["#{key}:\"#{value}\"" | acc]
-    end)
-  end
-
-  defp add_portal_item_search_text(acc, search_terms) do
-    case Map.get(search_terms, :search_text) do
-      nil -> acc
-      value -> [value | acc]
-    end
-  end
-
-  defp add_portal_item_type(acc, search_terms) do
-    case Map.get(search_terms, :type) do
-      nil -> acc
-      {type, keywords} -> ["type:\"#{type}\"", "typekeywords:\"#{keywords}\"" | acc]
-      type -> ["type:\"#{type}\"" | acc]
-    end
-  end
-
-  defp add_portal_item_owner(acc, search_terms) do
-    case Map.get(search_terms, :owner) do
-      nil -> acc
-      value -> ["owner:#{value}" | acc]
     end
   end
 end
