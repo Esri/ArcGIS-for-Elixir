@@ -123,7 +123,7 @@ defmodule ArcGIS.Feature.Service do
     path = Path.join("/content/items", service.id)
     request = Portal.build_request(service.portal, path, options)
 
-    case Portal.get(request, selector: ["url"]) do
+    case Portal.get(request, Keyword.put(options, :selector, ["url"])) do
       {:ok, url} ->
         result = cache(service, url)
         {:ok, result}
@@ -146,7 +146,7 @@ defmodule ArcGIS.Feature.Service do
   end
 
   defp build_request(service, resource, options) do
-    case url(service, auth_token: Keyword.get(options, :auth_token)) do
+    case url(service, options) do
       {:ok, url} ->
         resource_url =
           if resource != nil do

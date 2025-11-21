@@ -48,8 +48,8 @@ defmodule ArcGIS.Portal do
           | {:where, String.t()}
   @type request_option :: portal_option | query_option
   @type request_data :: [url: String.t(), params: url_meta, headers: url_meta]
-  @type get_options :: {:selector, [term()]}
-  @type post_options :: {:selector, [term()]}
+  @type get_options :: {:selector, [term()]} | {:tls_verify_none, boolean}
+  @type post_options :: {:selector, [term()]} | {:tls_verify_none, boolean}
   @type post_args :: keyword
 
   @arcgis_online_baseurl "https://arcgis.com/"
@@ -165,12 +165,19 @@ defmodule ArcGIS.Portal do
       |> Kernel.put_in([Access.key!(:metadata), :http_method], :get)
       |> Kernel.put_in([Access.key!(:metadata), :url], Keyword.get(request, :url))
 
-    with {:ok, %{body: body}} = response <- Req.get(request),
+    with {:ok, %{body: body}} = response <- Req.get(request, transport_options(options)),
          :noerror <- ArcGIS.check_for_error(response) do
       Telemetry.handle_success(telemetry)
       select(body, options)
     else
       error -> Telemetry.handle_error(error, telemetry)
+    end
+  end
+
+  defp transport_options(options) do
+    case Keyword.get(options, :tls_verify_none) do
+      true -> [connect_options: [transport_opts: [verify: :verify_none]]]
+      _ -> []
     end
   end
 
