@@ -134,16 +134,16 @@ defmodule ArcGIS.Portal.Item do
       name: from_map(arcgis_map, "name", ""),
       owner: from_map(arcgis_map, "owner", ""),
       properties: from_map(arcgis_map, "properties", %{}),
-      screenshots: [from_map(arcgis_map, "screenshots", [])],
+      screenshots: from_map(arcgis_map, "screenshots", []),
       size: from_map(arcgis_map, "size", 0),
       snippet: from_map(arcgis_map, "snippet", ""),
       spatial_reference: spatial_reference,
-      tags: [from_map(arcgis_map, "tags", [])],
+      tags: from_map(arcgis_map, "tags", []),
       thumbnail: from_map(arcgis_map, "thumbnail", ""),
       timestamps: timestamps_from_map(arcgis_map),
       title: from_map(arcgis_map, "title", ""),
       type: from_map(arcgis_map, "type", ""),
-      type_keywords: [from_map(arcgis_map, "typeKeywords", "")],
+      type_keywords: from_map(arcgis_map, "typeKeywords", []),
       url: from_map(arcgis_map, "url", "")
     }
   end
