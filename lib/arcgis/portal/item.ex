@@ -106,7 +106,12 @@ defmodule ArcGIS.Portal.Item do
   @spec get(Portal.t(), id :: String.t(), options :: [Portal.portal_option()]) ::
           {:ok, map} | {:error, reason :: String.t()}
   def get(%Portal{} = portal, id, options \\ []) when is_binary(id) do
-    Portal.get(portal, "/content/items/#{id}", options)
+    all_options =
+      options
+      |> Keyword.put(:is_features_query?, false)
+      |> Keyword.put(:transform, &new/1)
+
+    Portal.get(portal, "/content/items/#{id}", all_options)
   end
 
   @spec new(map) :: t()

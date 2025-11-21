@@ -178,11 +178,25 @@ defmodule ArcGIS.Portal do
       selector when selector != [] ->
         case Kernel.get_in(body, selector) do
           nil -> {:error, "Not found: #{inspect(selector)}"}
-          data -> {:ok, data}
+          data -> {:ok, transform_results(data, options)}
         end
 
       _ ->
         {:ok, handle_paged_body(body, options)}
+    end
+  end
+
+  defp transform_results(results, options) when is_list(results) do
+    case Keyword.get(options, :transform) do
+      nil ->
+        results
+
+      transform ->
+        if is_list(results) do
+          Enum.map(results, transform)
+        else
+          transform.(results)
+        end
     end
   end
 
@@ -198,7 +212,7 @@ defmodule ArcGIS.Portal do
       |> ArcGIS.SpatialReference.from_map()
 
     %ArcGIS.Portal.ResultSet{
-      results: results,
+      results: transform_results(results, options),
       next_offset: offset + Enum.count(results),
       offset: offset,
       more?: Map.get(page, "exceededTransferLimit", false),
@@ -208,10 +222,10 @@ defmodule ArcGIS.Portal do
 
   defp handle_paged_body(
          %{"results" => results, "nextStart" => offset, "start" => start} = page,
-         _options
+         options
        ) do
     %ArcGIS.Portal.ResultSet{
-      results: results,
+      results: transform_results(results, options),
       next_offset: offset,
       offset: start,
       more?: start + Enum.count(results) < page["total"]
