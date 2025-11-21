@@ -209,11 +209,34 @@ defmodule ArcGIS.Portal do
         end
 
       _ ->
-        {:ok, handle_paged_body(body)}
+        {:ok, handle_paged_body(body, options)}
     end
   end
 
-  defp handle_paged_body(%{"results" => results, "nextStart" => offset, "start" => start} = page) do
+  defp handle_paged_body(
+         %{"exceededTransferLimit" => more?, "features" => results} = page,
+         options
+       ) do
+    offset = Keyword.get(options, :offset, 0)
+
+    spatialReference =
+      page
+      |> Map.get("spatialReference", %{})
+      |> ArcGIS.SpatialReference.from_map()
+
+    %ArcGIS.Portal.ResultSet{
+      results: results,
+      next_offset: offset + Enum.count(results),
+      offset: offset,
+      more?: more?,
+      spatialReference: spatialReference
+    }
+  end
+
+  defp handle_paged_body(
+         %{"results" => results, "nextStart" => offset, "start" => start} = page,
+         _options
+       ) do
     %ArcGIS.Portal.ResultSet{
       results: results,
       next_offset: offset,
