@@ -29,6 +29,53 @@ defmodule ArcGIS.Utils do
     Enum.each(info_attrs, attr_printer)
   end
 
+  @local_telemetry_handler_name "arcgis_uteils_local_telemetry"
+
+  @spec enable_local_telemetry(boolean) :: :ok
+  @doc """
+  Enables or disables a local telemetry handler which
+  subscribes to interesting telemetry messages and forwards them
+  to `Logger.info/1`. Useful for local debugging.
+  """
+  def enable_local_telemetry(false) do
+    :telemetry.detach(@local_telemetry_handler_name)
+  end
+
+  def enable_local_telemetry(true) do
+    messages = [
+      [:finch, :request, :start],
+      [:finch, :request, :stop],
+      [:finch, :connect, :start],
+      [:finch, :connect, :stop],
+      [:finch, :send, :start],
+      [:finch, :send, :stop],
+      [:finch, :recv, :start],
+      [:finch, :recv, :stop],
+      [:arcgis, :request, :success],
+      [:arcgis, :request, :error]
+    ]
+
+    :telemetry.attach_many(
+      @local_telemetry_handler_name,
+      messages,
+      &__MODULE__.local_telemtry_handler/4,
+      nil
+    )
+
+    :ok
+  end
+
+  @doc false
+  def local_telemtry_handler(event_name, measurements, metadata, _config) do
+    Logger.info("#{inspect(event_name)}: #{inspect(measurements)}")
+
+    if Enum.member?([[:arcgis, :request, :success], [:arcgis, :request, :error]], event_name) do
+      Logger.info("\t\t#{inspect(metadata)}")
+    end
+
+    :ok
+  end
+
   @doc "Prints all pending messages in the process mailbox to console"
   @spec flush() :: :ok
   def flush() do
