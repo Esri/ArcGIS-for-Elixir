@@ -49,8 +49,15 @@ defmodule ArcGIS.Portal do
           | {:where, String.t()}
   @type request_option :: portal_option | query_option
   @type request_data :: [url: String.t(), params: url_meta, headers: url_meta]
-  @type get_options :: {:selector, [term()]} | {:verify_tls, boolean}
-  @type post_options :: {:selector, [term()]} | {:verify_tls, boolean}
+
+  @typedoc "A function that transforms raw ArcGIS results into a more prefereable form. Both one- and two-arity functions are supported, with the two arity receiving a map of metadata including such things as the spatial reference if available."
+  @type transform_fn ::
+          (source :: map -> transformed :: term)
+          | (source :: map, metadata :: map -> transformed :: term)
+
+  @type get_options :: {:selector, [term()]} | {:transform, transform_fn} | {:verify_tls, boolean}
+  @type post_options ::
+          {:selector, [term()]} | {:transform, transform_fn} | {:verify_tls, boolean}
   @type post_args :: keyword
 
   @arcgis_online_baseurl "https://arcgis.com/"
@@ -186,16 +193,23 @@ defmodule ArcGIS.Portal do
     end
   end
 
-  defp transform_results(results, options) do
+  defp transform_results(results, options, metadata \\ %{}) do
     case Keyword.get(options, :transform) do
       nil ->
         results
 
-      transform ->
+      transform when is_function(transform, 1) ->
         if is_list(results) do
           Enum.map(results, transform)
         else
           transform.(results)
+        end
+
+      transform when is_function(transform, 2) ->
+        if is_list(results) do
+          Enum.map(results, fn result -> transform.(result, metadata) end)
+        else
+          transform.(results, metadata)
         end
     end
   end
@@ -212,7 +226,7 @@ defmodule ArcGIS.Portal do
       |> ArcGIS.SpatialReference.from_map()
 
     %ArcGIS.Portal.ResultSet{
-      results: transform_results(results, options),
+      results: transform_results(results, options, %{spatial_reference: spatial_reference}),
       next_offset: offset + Enum.count(results),
       offset: offset,
       more?: Map.get(page, "exceededTransferLimit", false),
