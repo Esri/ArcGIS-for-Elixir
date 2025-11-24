@@ -40,7 +40,7 @@ defmodule ArcGIS.Feature do
     }
   end
 
-  def from_map(data), do: data
+  def from_map(data, _metadata), do: data
 
   defp as_geometry(%{"rings" => rings}, srid) do
     %Geometry.Polygon{rings: rings, srid: srid}
