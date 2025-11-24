@@ -38,8 +38,8 @@ defmodule ArcGIS.Telemetry do
           {:error, String.t()}
   @doc "Standardized handling of ArcGIS response errors."
   def handle_error(error, %__MODULE__{} = telemetry \\ %__MODULE__{}) do
-    {:error, message, metadata} = extract_error(error)
-    metadata = Map.merge(telemetry.metadata, metadata) |> Map.put(:message, message)
+    metadata = extract_error(error)
+    metadata = Map.merge(telemetry.metadata, metadata)
 
     if telemetry.force_logging or Application.get_env(:arcgis, :log_errors, false) do
       Logger.warning(
@@ -51,37 +51,34 @@ defmodule ArcGIS.Telemetry do
       :telemetry.execute(
         [:arcgis, :request, :error],
         telemetry.measurements,
-        Map.put(telemetry.metadata, :message, message)
+        metadata
       )
     end
 
-    {:error, message}
+    {:error, metadata.message}
   end
 
   defp extract_error({:ok, %Req.Response{body: %{"error" => error}}}) do
-    {
-      :error,
-      error["message"],
-      %{
-        details: Map.get(error, "details"),
-        status: Map.get(error, "code")
-      }
+    %{
+      message: error["message"],
+      details: Map.get(error, "details"),
+      status_code: Map.get(error, "code")
     }
   end
 
   defp extract_error({:ok, %Req.Response{} = response}) do
-    {:error, "#{inspect(response.body)}", %{status: response.status}}
+    %{message: "#{inspect(response.body)}", status: response.status}
   end
 
   defp extract_error({:error, %Req.TransportError{reason: reason}}) do
-    {:error, reason, %{}}
+    %{message: reason}
   end
 
   defp extract_error({:error, error}) do
-    {:error, error, %{}}
+    %{message: error}
   end
 
   defp extract_error(error) do
-    {:error, error, %{}}
+    %{message: error}
   end
 end
