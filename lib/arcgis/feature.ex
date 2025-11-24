@@ -26,10 +26,39 @@ defmodule ArcGIS.Feature do
           | {:upload_format, upload_format}
           | {:use_global_ids, boolean}
 
+  @spec from_map(source :: map, metadata :: map) :: t()
+  @doc "Create a new feature struct from a map of data, such as returned by ArcGIS"
+  def from_map(%{"geometry" => geometry} = data, %{} = metadata) do
+    srid =
+      metadata
+      |> Map.get(:spatial_reference, %ArcGIS.SpatialReference{})
+      |> ArcGIS.SpatialReference.best_srid()
+
+    %{
+      attributes: data["attributes"],
+      geometry: as_geometry(geometry, srid)
+    }
+  end
+
+  def from_map(data), do: data
+
+  defp as_geometry(%{"rings" => rings}, srid) do
+    %Geometry.Polygon{rings: rings, srid: srid}
+  end
+
+  defp as_geometry(%{"x" => x, "y" => y, "z" => z}, srid) do
+    Geometry.PointZ.new(x, y, z, srid: srid)
+  end
+
+  defp as_geometry(%{"x" => x, "y" => y}, srid) do
+    Geometry.Point.new(x, y, srid: srid)
+  end
+
   @spec query(Service.t(), layer_id :: non_neg_integer(), [Portal.request_option()]) :: [t()]
   @doc "Query features in a Feature Service layer or table"
   def query(%Service{} = feature_service, layer_id, options \\ [])
       when is_number(layer_id) and layer_id >= 0 do
+    options = Keyword.put(options, :transform, &__MODULE__.from_map/2)
     Service.post(feature_service, "/#{layer_id}/query", [], options)
   end
 
