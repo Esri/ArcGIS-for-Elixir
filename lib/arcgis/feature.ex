@@ -28,7 +28,7 @@ defmodule ArcGIS.Feature do
 
   @spec from_map(source :: map, metadata :: map) :: t()
   @doc "Create a new feature struct from a map of data, such as returned by ArcGIS"
-  def from_map(%{"geometry" => geometry} = data, %{} = metadata) do
+  def from_map(%{"geometry" => geometry} = data, %{geometry_type: geometry_type} = metadata) do
     srid =
       metadata
       |> Map.get(:spatial_reference, %ArcGIS.SpatialReference{})
@@ -36,23 +36,11 @@ defmodule ArcGIS.Feature do
 
     %{
       attributes: data["attributes"],
-      geometry: as_geometry(geometry, srid)
+      geometry: as_geometry(geometry_type, geometry, srid)
     }
   end
 
   def from_map(data, _metadata), do: data
-
-  defp as_geometry(%{"rings" => rings}, srid) do
-    %Geometry.Polygon{rings: rings, srid: srid}
-  end
-
-  defp as_geometry(%{"x" => x, "y" => y, "z" => z}, srid) do
-    Geometry.PointZ.new(x, y, z, srid)
-  end
-
-  defp as_geometry(%{"x" => x, "y" => y}, srid) do
-    Geometry.Point.new(x, y, srid)
-  end
 
   @spec query(Service.t(), layer_id :: non_neg_integer(), [Portal.request_option()]) :: [t()]
   @doc "Query features in a Feature Service layer or table"
@@ -147,5 +135,69 @@ defmodule ArcGIS.Feature do
 
   defp sanitize_attribute({key, value}, acc) do
     Map.put(acc, key, value)
+  end
+
+  defp as_geometry(Geometry.Polygon, geometry, srid) do
+    %Geometry.Polygon{rings: geometry["rings"], srid: srid}
+  end
+
+  defp as_geometry(Geometry.PolygonZ, geometry, srid) do
+    %Geometry.PolygonZ{rings: geometry["rings"], srid: srid}
+  end
+
+  defp as_geometry(Geometry.PolygonM, geometry, srid) do
+    %Geometry.PolygonM{rings: geometry["rings"], srid: srid}
+  end
+
+  defp as_geometry(Geometry.PolygonZM, geometry, srid) do
+    %Geometry.PolygonZM{rings: geometry["rings"], srid: srid}
+  end
+
+  defp as_geometry(Geometry.MultiLineString, geometry, srid) do
+    %Geometry.MultiLineString{line_strings: geometry["paths"], srid: srid}
+  end
+
+  defp as_geometry(Geometry.MultiLineStringZ, geometry, srid) do
+    %Geometry.MultiLineStringZ{line_strings: geometry["paths"], srid: srid}
+  end
+
+  defp as_geometry(Geometry.MultiLineStringM, geometry, srid) do
+    %Geometry.MultiLineStringM{line_strings: geometry["paths"], srid: srid}
+  end
+
+  defp as_geometry(Geometry.MultiLineStringZM, geometry, srid) do
+    %Geometry.MultiLineStringZM{line_strings: geometry["paths"], srid: srid}
+  end
+
+  defp as_geometry(Geometry.MultiPoint, geometry, srid) do
+    %Geometry.MultiPoint{points: geometry["points"], srid: srid}
+  end
+
+  defp as_geometry(Geometry.MultiPointZ, geometry, srid) do
+    %Geometry.MultiPointZ{points: geometry["points"], srid: srid}
+  end
+
+  defp as_geometry(Geometry.MultiPointM, geometry, srid) do
+    %Geometry.MultiPointM{points: geometry["points"], srid: srid}
+  end
+
+  defp as_geometry(Geometry.MultiPointZM, geometry, srid) do
+    %Geometry.MultiPointZM{points: geometry["points"], srid: srid}
+  end
+
+  defp as_geometry(Geometry.PointZ, %{"x" => x, "y" => y, "z" => z}, srid) do
+    Geometry.PointZ.new(x, y, z, srid)
+  end
+
+  defp as_geometry(Geometry.PointM, %{"x" => x, "y" => y, "m" => m}, srid) do
+    Geometry.PointM.new(x, y, m, srid)
+  end
+
+  defp as_geometry(Geometry.PointZM, %{"x" => x, "y" => y, "z" => z, "m" => m}, srid) do
+    Geometry.PointZM.new(x, y, z, m, srid)
+  end
+
+  defp as_geometry(Geometry.Point, %{"x" => x, "y" => y}, srid) do
+    Geometry.Point.new(x, y, srid)
   end
 end

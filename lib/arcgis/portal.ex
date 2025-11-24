@@ -3,7 +3,9 @@ defmodule ArcGIS.Portal do
   An ArcGIS Portal. This may refer to an ArcGIS Online endpoint or an ArcGIS Enterprise installation.
   """
   require Logger
+  require ArcGIS.Portal.Macros
 
+  alias ArcGIS.Portal.Macros
   alias ArcGIS.Telemetry
   alias ArcGIS.Utils
 
@@ -225,8 +227,17 @@ defmodule ArcGIS.Portal do
       |> Map.get("spatialReference", %{})
       |> ArcGIS.SpatialReference.from_map()
 
+    geometry_type =
+      geometry_module_for(
+        Map.get(page, "geometryType", ""),
+        Map.get(page, "hasZ", false),
+        Map.get(page, "hasM", false)
+      )
+
+    metadata = %{spatial_reference: spatial_reference, geometry_type: geometry_type}
+
     %ArcGIS.Portal.ResultSet{
-      results: transform_results(results, options, %{spatial_reference: spatial_reference}),
+      results: transform_results(results, options, metadata),
       next_offset: offset + Enum.count(results),
       offset: offset,
       more?: Map.get(page, "exceededTransferLimit", false),
@@ -247,6 +258,12 @@ defmodule ArcGIS.Portal do
   end
 
   defp handle_paged_body(body, options), do: transform_results(body, options)
+
+  def geometry_module_for("", _z, _m), do: :unknown
+  Macros.geometry_module_for("esriGeometryMultipoint", "Geometry.MultiPoint")
+  Macros.geometry_module_for("esriGeometryPoint", "Geometry.Point")
+  Macros.geometry_module_for("esriGeometryPolygon", "Geometry.Polygon")
+  Macros.geometry_module_for("esriGeometryPolyline", "Geometry.MultiLineString")
 
   @spec build_request(portal :: t(), relative_path :: String.t(), [request_option]) ::
           request_data
