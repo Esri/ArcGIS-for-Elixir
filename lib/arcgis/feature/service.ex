@@ -120,11 +120,7 @@ defmodule ArcGIS.Feature.Service do
   defp fetch_and_cache_url(service, options) do
     options = [selector: ["url"], auth_token: Keyword.get(options, :auth_token, "")]
 
-    case Portal.get(
-           service.portal,
-           "/content/items/#{service.id}",
-           options
-         ) do
+    case Portal.Item.get(service.portal, service.id, options) do
       {:ok, url} ->
         result = cache(service, url)
         {:ok, result}
