@@ -232,7 +232,7 @@ defmodule ArcGIS.Portal do
     }
   end
 
-  defp handle_paged_body(body, _options), do: body
+  defp handle_paged_body(body, options), do: transform_results(body, options)
 
   @spec build_request(portal :: t(), relative_path :: String.t(), [request_option]) ::
           request_data
