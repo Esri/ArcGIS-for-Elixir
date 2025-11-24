@@ -10,13 +10,13 @@ defmodule ArcGIS.Portal.ResultSet do
             next_offset: 0,
             more?: false,
             results: [],
-            spatialReference: %ArcGIS.SpatialReference{}
+            spatial_reference: %ArcGIS.SpatialReference{}
 
   @type t :: %__MODULE__{
           offset: non_neg_integer,
           next_offset: non_neg_integer,
           results: list,
           more?: boolean,
-          spatialReference: ArcGIS.SpatialReference.t()
+          spatial_reference: ArcGIS.SpatialReference.t()
         }
 end
