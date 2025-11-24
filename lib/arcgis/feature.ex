@@ -47,11 +47,11 @@ defmodule ArcGIS.Feature do
   end
 
   defp as_geometry(%{"x" => x, "y" => y, "z" => z}, srid) do
-    Geometry.PointZ.new(x, y, z, srid: srid)
+    Geometry.PointZ.new(x, y, z, srid)
   end
 
   defp as_geometry(%{"x" => x, "y" => y}, srid) do
-    Geometry.Point.new(x, y, srid: srid)
+    Geometry.Point.new(x, y, srid)
   end
 
   @spec query(Service.t(), layer_id :: non_neg_integer(), [Portal.request_option()]) :: [t()]
