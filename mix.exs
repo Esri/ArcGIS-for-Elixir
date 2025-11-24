@@ -1,3 +1,5 @@
+#ifndef MIX_EXS
+#define MIX_EXS
 defmodule ArcGIS.MixProject do
   use Mix.Project
 
@@ -53,11 +55,13 @@ defmodule ArcGIS.MixProject do
       formatters: ["html"],
       groups_for_modules: [
         Users: [~r/ArcGIS.User.*/],
+        Portals: [~r/ArcGIS.Portal.*/],
         Features: [~r/ArcGIS.Feature(?!.(Domain|Schema)).*/],
         Schemas: [~r/ArcGIS.Feature.Schema.*/],
         Domains: [~r/ArcGIS.Feature.Domain.*/],
-        "Utility Types": [ArcGIS.Timestamps]
+        "Utility Types": [ArcGIS.Extent, ArcGIS.SpatialReference, ArcGIS.Timestamps]
       ]
     ]
   end
 end
+#endif // MIX_EXS
