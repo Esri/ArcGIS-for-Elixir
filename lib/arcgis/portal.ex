@@ -186,7 +186,7 @@ defmodule ArcGIS.Portal do
     end
   end
 
-  defp transform_results(results, options) when is_list(results) do
+  defp transform_results(results, options) do
     case Keyword.get(options, :transform) do
       nil ->
         results
