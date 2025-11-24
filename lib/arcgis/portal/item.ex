@@ -1,4 +1,8 @@
 defmodule ArcGIS.Portal.Item do
+  @moduledoc """
+  Provides a struct for ArcGIS portal items and means to fetch and query them.
+  """
+
   alias ArcGIS.Portal
 
   # not include:
@@ -84,7 +88,8 @@ defmodule ArcGIS.Portal.Item do
         }
 
   @spec query(Portal.t(), portal_item_search_terms, options :: [Portal.portal_option()]) ::
-          {:ok, map} | {:error, reason :: String.t()}
+          {:ok, ArcGIS.Portal.ResultSet.t()} | {:error, reason :: String.t()}
+  @doc "Queries an ArcGIS portal for one or more items"
   def query(%Portal{} = portal, search_terms, options \\ []) do
     query =
       []
@@ -104,7 +109,8 @@ defmodule ArcGIS.Portal.Item do
   end
 
   @spec get(Portal.t(), id :: String.t(), options :: [Portal.portal_option()]) ::
-          {:ok, map} | {:error, reason :: String.t()}
+          {:ok, t()} | {:error, reason :: String.t()}
+  @doc "Fetches an item from an ArcGIS portal by global id"
   def get(%Portal{} = portal, id, options \\ []) when is_binary(id) do
     all_options =
       options
@@ -115,6 +121,12 @@ defmodule ArcGIS.Portal.Item do
   end
 
   @spec new(map) :: t()
+  @doc """
+  Create an `%ArcGIS.Portal.Item{}` from a map. 
+
+  Used internally to transform maps of data returned by an ArcGIS portal
+  into item structs.
+  """
   def new(%{} = arcgis_map) do
     spatial_reference = %ArcGIS.SpatialReference{
       wkid: from_map(arcgis_map, "spatialReference", 0)
