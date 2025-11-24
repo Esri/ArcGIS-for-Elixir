@@ -103,7 +103,7 @@ defmodule ArcGIS.Portal.Item do
       options
       |> Keyword.put(:is_features_query?, false)
       |> Keyword.put(:params, %{q: query})
-      |> Keyword.put(:transform, &new/1)
+      |> Keyword.put(:transform, &__MODULE__.from_map/1)
 
     Portal.get(portal, "/search", all_options)
   end
@@ -115,19 +115,19 @@ defmodule ArcGIS.Portal.Item do
     all_options =
       options
       |> Keyword.put(:is_features_query?, false)
-      |> Keyword.put(:transform, &new/1)
+      |> Keyword.put(:transform, &__MODULE__.from_map/1)
 
     Portal.get(portal, "/content/items/#{id}", all_options)
   end
 
-  @spec new(map) :: t()
+  @spec from_map(map) :: t()
   @doc """
   Create an `%ArcGIS.Portal.Item{}` from a map. 
 
   Used internally to transform maps of data returned by an ArcGIS portal
   into item structs.
   """
-  def new(%{} = arcgis_map) do
+  def from_map(%{} = arcgis_map) do
     spatial_reference = %ArcGIS.SpatialReference{
       wkid: from_map(arcgis_map, "spatialReference", 0)
     }
