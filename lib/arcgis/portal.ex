@@ -147,7 +147,7 @@ defmodule ArcGIS.Portal do
     telemetry =
       options
       |> Keyword.get(:telemetry, %Telemetry{})
-      |> Kernel.put_in([Access.key!(:metadata), :http_method], :get)
+      |> Kernel.put_in([Access.key!(:metadata), :http_method], :post)
       |> Kernel.put_in([Access.key!(:metadata), :url], Keyword.get(request, :url))
 
     all_args = add_transport_options(args, portal, options)
