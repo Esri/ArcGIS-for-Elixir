@@ -1,0 +1,9 @@
+{
+  "error": {
+    "code": 400,
+    "details": [
+      "Invalid username or password."
+    ],
+    "message": "Unable to generate token."
+  }
+}
