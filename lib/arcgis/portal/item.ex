@@ -156,6 +156,81 @@ defmodule ArcGIS.Portal.Item do
     end
   end
 
+  @spec delete(Portal.t(), t() | [t()], options :: [Portal.portal_option()]) ::
+          %{deletions: [String.t()], failures: [{id :: String.t(), reason :: String.t()}]}
+  @doc "Deletes one or more portal items"
+  def delete(%Portal{} = portal, %__MODULE__{} = item, options) do
+    delete(portal, [item], options)
+  end
+
+  def delete(%Portal{} = portal, items, options) when is_list(items) do
+    {deletions, _} =
+      Enum.reduce(
+        items,
+        {%{}, nil},
+        fn %{id: id, owner: owner}, {deletions, default_user} ->
+          {user, new_default_user} =
+            cond do
+              owner != nil ->
+                {owner, default_user}
+
+              default_user != nil ->
+                {default_user, default_user}
+
+              true ->
+                {:ok, token_user} =
+                  ArcGIS.User.from_token(portal, Keyword.get(options, :auth_token))
+
+                {token_user, token_user}
+            end
+
+          {Map.update(deletions, user, [id], fn ids -> [id | ids] end), new_default_user}
+        end
+      )
+
+    Enum.reduce(
+      deletions,
+      %{deletions: [], failures: []},
+      fn {user, item_ids}, report ->
+        resource = "/content/users/#{user}/deleteItems"
+        form_data = %{}
+        params = %{items: Enum.join(item_ids, ",")}
+        delete_options = Keyword.merge(options, params: params, selector: ["results"])
+
+        case Portal.post(portal, resource, form_data, delete_options) do
+          {:ok, results} ->
+            Enum.reduce(
+              results,
+              report,
+              fn %{"itemId" => id} = result, report ->
+                if Map.get(result, "success", false) do
+                  %{report | deletions: [id | report.deletions]}
+                else
+                  error =
+                    case Kernel.get_in(result, ["error", "message"]) do
+                      nil -> "Unknown"
+                      error -> error
+                    end
+
+                  %{report | failures: [{id, error} | report.failures]}
+                end
+              end
+            )
+
+          error ->
+            %{
+              report
+              | failures: [
+                  Enum.reduce(item_ids, report.failures, fn id, failures ->
+                    [{id, error} | failures]
+                  end)
+                ]
+            }
+        end
+      end
+    )
+  end
+
   @spec from_map(map) :: t()
   @doc """
   Create an `%ArcGIS.Portal.Item{}` from a map. 
