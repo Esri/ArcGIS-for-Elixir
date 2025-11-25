@@ -107,7 +107,11 @@ defmodule ArcGIS.Portal.Item do
       options
       |> Keyword.merge(
         is_features_query?: false,
-        params: %{filter: query, num: Keyword.get(options, :limit, 100)},
+        params: %{
+          filter: query,
+          num: Keyword.get(options, :limit, 100),
+          start: Keyword.get(options, :offset, 1)
+        },
         transform: &__MODULE__.from_map/1
       )
 
