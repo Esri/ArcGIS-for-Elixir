@@ -31,6 +31,7 @@ defmodule ArcGIS.Portal.Item do
     :description,
     :documentation,
     :extent,
+    :folder,
     :licenseInfo,
     :name,
     :counts,
@@ -63,6 +64,7 @@ defmodule ArcGIS.Portal.Item do
           description: String.t(),
           documentation: String.t(),
           extent: ArcGIS.Extent.t(),
+          folder: String.t() | nil,
           licenseInfo: String.t(),
           name: String.t(),
           owner: String.t(),
@@ -131,7 +133,7 @@ defmodule ArcGIS.Portal.Item do
     # TODO: support file uploads
     # item.accesas => requires a second call?
     owner = owner(portal, options)
-    folder = folder(options)
+    folder = if item.folder == nil, do: nil, else: "/#{item.folder}"
     resource = "/content/users/#{owner}#{folder}/addItem"
 
     form_data = as_create_form_data(item)
@@ -173,7 +175,8 @@ defmodule ArcGIS.Portal.Item do
       description: lookup(arcgis_map, "description", ""),
       documentation: lookup(arcgis_map, "documentation", ""),
       extent: ArcGIS.Extent.new(Map.get(arcgis_map, "extent")),
-      licenseInfo: lookup(arcgis_map, "", ""),
+      folder: lookup(arcgis_map, "ownerFolder", nil),
+      licenseInfo: lookup(arcgis_map, "licenseInfo", ""),
       name: lookup(arcgis_map, "name", ""),
       owner: lookup(arcgis_map, "owner", ""),
       properties: lookup(arcgis_map, "properties", %{}),
@@ -204,13 +207,6 @@ defmodule ArcGIS.Portal.Item do
       user.name.user
     else
       _ -> nil
-    end
-  end
-
-  defp folder(options) do
-    case Keyword.get(options, :folder) do
-      nil -> nil
-      folder -> "/#{folder}"
     end
   end
 
