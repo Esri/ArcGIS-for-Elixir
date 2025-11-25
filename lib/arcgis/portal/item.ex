@@ -101,9 +101,11 @@ defmodule ArcGIS.Portal.Item do
 
     all_options =
       options
-      |> Keyword.put(:is_features_query?, false)
-      |> Keyword.put(:params, %{q: query})
-      |> Keyword.put(:transform, &__MODULE__.from_map/1)
+      |> Keyword.merge(
+        is_features_query?: false,
+        params: %{q: query},
+        transform: &__MODULE__.from_map/1
+      )
 
     Portal.get(portal, "/search", all_options)
   end
@@ -114,8 +116,11 @@ defmodule ArcGIS.Portal.Item do
   def get(%Portal{} = portal, id, options \\ []) when is_binary(id) do
     all_options =
       options
-      |> Keyword.put(:is_features_query?, false)
-      |> Keyword.put(:transform, &__MODULE__.from_map/1)
+      |> Keyword.delete(:selector)
+      |> Keyword.merge(
+        is_features_query?: false,
+        transform: &__MODULE__.from_map/1
+      )
 
     Portal.get(portal, "/content/items/#{id}", all_options)
   end
