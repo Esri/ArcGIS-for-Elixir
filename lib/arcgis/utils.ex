@@ -175,7 +175,7 @@ defmodule ArcGIS.Utils do
   end
 
   @doc "Transforms a string or number to an integer, safely, if possible"
-  @spec to_integer(String.t() | number, default :: integer | nil) :: integer
+  @spec to_integer(String.t() | number, default :: term) :: integer
   def to_integer(number, default \\ 0)
   def to_integer(number, _default) when is_integer(number), do: number
 
