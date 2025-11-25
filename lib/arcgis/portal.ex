@@ -60,7 +60,7 @@ defmodule ArcGIS.Portal do
   @type get_options :: {:selector, [term()]} | {:transform, transform_fn} | {:verify_tls, boolean}
   @type post_options ::
           {:selector, [term()]} | {:transform, transform_fn} | {:verify_tls, boolean}
-  @type post_args :: keyword
+  @type form_data :: map
 
   @arcgis_online_baseurl "https://arcgis.com/"
 
@@ -108,7 +108,18 @@ defmodule ArcGIS.Portal do
     end
   end
 
-  @spec get(t(), request_data, [get_options]) ::
+  @spec only_portal_options(Keyword.t()) :: [portal_option()]
+  @doc false
+  def only_portal_options(options) do
+    known_options = [:auth_token, :client_id, :headers, :params, :portal]
+
+    Keyword.filter(
+      options,
+      fn {key, _value} -> Enum.member?(known_options, key) end
+    )
+  end
+
+  @spec get(t(), resource :: String.t(), [get_options]) ::
           {:ok, Portal.ResultSet.t()} | {:ok, term} | {:error, reason :: String.t()}
   @doc """
   Performs an HTTP GET request, checking for errors.
@@ -129,9 +140,12 @@ defmodule ArcGIS.Portal do
       |> Kernel.put_in([Access.key!(:metadata), :http_method], :get)
       |> Kernel.put_in([Access.key!(:metadata), :url], Keyword.get(request, :url))
 
-    all_args = add_transport_options([], portal, options)
+    get_args = [
+      connect_options: transport_options(portal, options),
+      receive_timeout: ArcGIS.default_query_timeout()
+    ]
 
-    with {:ok, %{body: body}} = response <- Req.get(request, all_args),
+    with {:ok, %{body: body}} = response <- Req.get(request, get_args),
          :noerror <- ArcGIS.check_for_error(response) do
       Telemetry.handle_success(telemetry)
       select(body, options)
@@ -140,7 +154,7 @@ defmodule ArcGIS.Portal do
     end
   end
 
-  @spec post(t(), request_data, post_args, [post_options]) ::
+  @spec post(t(), resource :: String.t(), form_data, [post_options]) ::
           {:ok, Portal.ResultSet.t()} | {:ok, term} | {:error, reason :: String.t()}
   @doc """
   Performs an HTTP POST request, checking for errors.
@@ -150,7 +164,7 @@ defmodule ArcGIS.Portal do
   would return the `srid` in the `geometry` object if it exists, or an
   error tuple otherwise.
   """
-  def post(portal, resource, args, options \\ []) do
+  def post(portal, resource, form_data, options \\ []) do
     request = build_request(portal, resource, options)
 
     telemetry =
@@ -159,9 +173,14 @@ defmodule ArcGIS.Portal do
       |> Kernel.put_in([Access.key!(:metadata), :http_method], :post)
       |> Kernel.put_in([Access.key!(:metadata), :url], Keyword.get(request, :url))
 
-    all_args = add_transport_options(args, portal, options)
+    post_args =
+      [
+        form: form_data,
+        connect_options: transport_options(portal, options),
+        receive_timeout: ArcGIS.default_query_timeout()
+      ]
 
-    with {:ok, %{body: body}} = response <- Req.post(request, all_args),
+    with {:ok, %{body: body}} = response <- Req.post(request, post_args),
          :noerror <- ArcGIS.check_for_error(response) do
       Telemetry.handle_success(telemetry)
       select(body, options)
@@ -170,15 +189,15 @@ defmodule ArcGIS.Portal do
     end
   end
 
-  defp add_transport_options(args, portal, options) do
+  defp transport_options(portal, options) do
     no_tls =
       portal.verify_tls === false or
         Keyword.get(options, :verify_tls) === false
 
     if no_tls do
-      Keyword.put(args, :connect_options, transport_opts: [verify: :verify_none])
+      [timeout: ArcGIS.default_query_timeout(), verify: :verify_none]
     else
-      args
+      [timeout: ArcGIS.default_query_timeout()]
     end
   end
 

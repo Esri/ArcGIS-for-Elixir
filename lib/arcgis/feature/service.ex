@@ -44,12 +44,7 @@ defmodule ArcGIS.Feature.Service do
       |> :json.encode()
       |> to_string()
 
-    post_options =
-      [
-        form: %{"outputType" => "featureService", "createParameters" => params},
-        connect_options: [timeout: ArcGIS.default_query_timeout()],
-        receive_timeout: ArcGIS.default_query_timeout()
-      ]
+    form_data = %{"outputType" => "featureService", "createParameters" => params}
 
     folder =
       case parameters.folder_id do
@@ -63,7 +58,7 @@ defmodule ArcGIS.Feature.Service do
       options
       |> Keyword.put(:is_features_query?, false)
 
-    case Portal.post(portal, resource, post_options, request_options) do
+    case Portal.post(portal, resource, form_data, request_options) do
       {:ok, %{"itemId" => id, "serviceurl" => url}} ->
         service = %__MODULE__{portal: portal, id: id}
         cache(service, url)
@@ -86,18 +81,12 @@ defmodule ArcGIS.Feature.Service do
     end
   end
 
-  @spec post(t(), resource :: String.t(), document :: Keyword.t(), options :: Keyword.t()) ::
+  @spec post(t(), resource :: String.t(), form_data :: map, options :: Keyword.t()) ::
           {:ok, map} | {:error, reason :: String.t()}
-  def post(%__MODULE__{} = service, resource, document, options \\ []) do
-    post_args = [
-      form: document,
-      connect_options: [timeout: ArcGIS.default_query_timeout()],
-      receive_timeout: ArcGIS.default_query_timeout()
-    ]
-
+  def post(%__MODULE__{} = service, resource, form_data, options \\ []) do
     case resource_url(service, resource, options) do
       {:error, _} = error -> error
-      url -> Portal.post(service.portal, url, post_args, options)
+      resource -> Portal.post(service.portal, resource, form_data, options)
     end
   end
 

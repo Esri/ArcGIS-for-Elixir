@@ -64,21 +64,17 @@ defmodule ArcGIS.User do
           user_type: String.t()
         }
 
-  @spec from_token(Portal.t(), auth_token :: String.t()) :: {:ok, map} | {:error, term}
+  @spec from_token(Portal.t(), token :: String.t()) :: {:ok, map} | {:error, term}
   @doc """
   Given a portal and an auth token, returns the information related to the user account
   associated with the token, if any.
   """
-  def from_token(%Portal{} = portal, auth_token) when is_binary(auth_token) do
+  def from_token(%Portal{} = portal, token) when is_binary(token) do
     resource = "/community/self"
+    form_data = %{}
+    options = [auth_token: token]
 
-    post_options = [
-      form: %{},
-      connect_options: [timeout: ArcGIS.default_query_timeout()],
-      receive_timeout: ArcGIS.default_query_timeout()
-    ]
-
-    case Portal.post(portal, resource, post_options, auth_token: auth_token) do
+    case Portal.post(portal, resource, form_data, options) do
       {:ok, user} -> {:ok, from_map(user)}
       error -> error
     end
@@ -102,7 +98,9 @@ defmodule ArcGIS.User do
   pass in `referer` value via the `options` parameter.
   """
   def generate_token(username, password, %Portal{} = portal, options \\ []) do
-    params =
+    resource = "/generateToken"
+
+    form_data =
       %{
         username: username,
         password: password,
@@ -110,15 +108,9 @@ defmodule ArcGIS.User do
         referer: referer(options)
       }
 
-    post_data =
-      [
-        form: params,
-        connect_options: [transport_opts: [verify: :verify_none]]
-      ]
-
     options = [selector: ["token"]]
 
-    case Portal.post(portal, "/generateToken", post_data, options) do
+    case Portal.post(portal, resource, form_data, options) do
       {:ok, token} -> {:ok, token}
       error -> error
     end
