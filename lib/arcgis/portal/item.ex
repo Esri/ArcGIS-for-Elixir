@@ -86,7 +86,8 @@ defmodule ArcGIS.Portal.Item do
           search_text: String.t(),
           keywords: [{key :: String.t(), value :: String.t()}],
           type: type :: String.t() | {type :: String.t(), keywords :: String.t()},
-          owner: String.t()
+          owner: String.t(),
+          title: String.t()
         }
 
   @spec query(Portal.t(), portal_item_search_terms, options :: [Portal.portal_option()]) ::
@@ -99,6 +100,7 @@ defmodule ArcGIS.Portal.Item do
       |> add_portal_item_search_text(search_terms)
       |> add_portal_item_type(search_terms)
       |> add_portal_item_owner(search_terms)
+      |> add_portal_item_title(search_terms)
       |> Enum.join(" AND ")
 
     all_options =
@@ -292,6 +294,13 @@ defmodule ArcGIS.Portal.Item do
     case Map.get(search_terms, :owner) do
       nil -> acc
       value -> ["owner:#{value}" | acc]
+    end
+  end
+
+  defp add_portal_item_title(acc, search_terms) do
+    case Map.get(search_terms, :title) do
+      nil -> acc
+      value -> ["title:\"#{value}\"" | acc]
     end
   end
 end
