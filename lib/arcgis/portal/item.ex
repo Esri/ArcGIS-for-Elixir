@@ -125,6 +125,29 @@ defmodule ArcGIS.Portal.Item do
     Portal.get(portal, "/content/items/#{id}", all_options)
   end
 
+  @spec create(Portal.t(), t(), options :: [Portal.portal_option()]) ::
+          {:ok, t()} | {:error, reason :: String.t()}
+  def create(%Portal{} = portal, %__MODULE__{} = item, options) do
+    # TODO: support file uploads
+    # item.accesas => requires a second call?
+    owner = owner(portal, options)
+    folder = folder(options)
+    resource = "/content/users/#{owner}#{folder}/addItem"
+
+    form_data = as_create_form_data(item)
+
+    # options = Keyword.put(options, :transform, &__MODULE__.from_map/1)
+    create_options = Keyword.put(options, :selector, ["id"])
+
+    case Portal.post(portal, resource, form_data, create_options) do
+      {:ok, id} ->
+        get(portal, id, options)
+
+      error ->
+        error
+    end
+  end
+
   @spec from_map(map) :: t()
   @doc """
   Create an `%ArcGIS.Portal.Item{}` from a map. 
@@ -133,39 +156,96 @@ defmodule ArcGIS.Portal.Item do
   into item structs.
   """
   def from_map(%{} = arcgis_map) do
+    raw_wkid = lookup(arcgis_map, "spatialReference", 0)
+    wkid = ArcGIS.Utils.to_integer(raw_wkid, raw_wkid)
+
     spatial_reference = %ArcGIS.SpatialReference{
-      wkid: from_map(arcgis_map, "spatialReference", 0)
+      wkid: wkid
     }
 
     %__MODULE__{
-      id: from_map(arcgis_map, "id", ""),
-      access: String.to_existing_atom(from_map(arcgis_map, "access", "private")),
-      accessInformation: from_map(arcgis_map, "accessInformation", ""),
-      categories: from_map(arcgis_map, "categories", []),
+      id: lookup(arcgis_map, "id", ""),
+      access: String.to_existing_atom(lookup(arcgis_map, "access", "private")),
+      accessInformation: lookup(arcgis_map, "accessInformation", ""),
+      categories: lookup(arcgis_map, "categories", []),
       counts: counts_from_map(arcgis_map),
-      culture: from_map(arcgis_map, "culture", []),
-      description: from_map(arcgis_map, "description", ""),
-      documentation: from_map(arcgis_map, "documentation", ""),
+      culture: lookup(arcgis_map, "culture", []),
+      description: lookup(arcgis_map, "description", ""),
+      documentation: lookup(arcgis_map, "documentation", ""),
       extent: ArcGIS.Extent.new(Map.get(arcgis_map, "extent")),
-      licenseInfo: from_map(arcgis_map, "", ""),
-      name: from_map(arcgis_map, "name", ""),
-      owner: from_map(arcgis_map, "owner", ""),
-      properties: from_map(arcgis_map, "properties", %{}),
-      screenshots: from_map(arcgis_map, "screenshots", []),
-      size: from_map(arcgis_map, "size", 0),
-      snippet: from_map(arcgis_map, "snippet", ""),
+      licenseInfo: lookup(arcgis_map, "", ""),
+      name: lookup(arcgis_map, "name", ""),
+      owner: lookup(arcgis_map, "owner", ""),
+      properties: lookup(arcgis_map, "properties", %{}),
+      screenshots: lookup(arcgis_map, "screenshots", []),
+      size: lookup(arcgis_map, "size", 0),
+      snippet: lookup(arcgis_map, "snippet", ""),
       spatial_reference: spatial_reference,
-      tags: from_map(arcgis_map, "tags", []),
-      thumbnail: from_map(arcgis_map, "thumbnail", ""),
+      tags: lookup(arcgis_map, "tags", []),
+      thumbnail: lookup(arcgis_map, "thumbnail", ""),
       timestamps: timestamps_from_map(arcgis_map),
-      title: from_map(arcgis_map, "title", ""),
-      type: from_map(arcgis_map, "type", ""),
-      type_keywords: from_map(arcgis_map, "typeKeywords", []),
-      url: from_map(arcgis_map, "url", "")
+      title: lookup(arcgis_map, "title", ""),
+      type: lookup(arcgis_map, "type", ""),
+      type_keywords: lookup(arcgis_map, "typeKeywords", []),
+      url: lookup(arcgis_map, "url", "")
     }
   end
 
-  defp from_map(map, key, default) do
+  defp owner(portal, options) do
+    case Keyword.get(options, :owner) do
+      nil -> user_from_token(portal, options)
+      owner -> owner
+    end
+  end
+
+  defp user_from_token(portal, options) do
+    with token when is_binary(token) <- Keyword.get(options, :auth_token),
+         {:ok, user} <- ArcGIS.User.from_token(portal, token) do
+      user.name.user
+    else
+      _ -> nil
+    end
+  end
+
+  defp folder(options) do
+    case Keyword.get(options, :folder) do
+      nil -> nil
+      folder -> "/#{folder}"
+    end
+  end
+
+  defp as_create_form_data(item) do
+    %{
+      accessInformation: item.accessInformation,
+      categories: Jason.encode!(item.categories),
+      culture: item.culture,
+      description: item.description,
+      documentation: item.documentation,
+      extent: form_data_extent(item.extent),
+      licenseInfo: item.licenseInfo,
+      name: item.name,
+      properties: Jason.encode!(item.properties),
+      proxyFilter: item.proxyFilter,
+      snippet: item.snippet,
+      spatialReference: ArcGIS.SpatialReference.best_srid(item.spatial_reference),
+      tags: Enum.join(item.tags, ", "),
+      thumbnail: item.thumbnail,
+      title: item.title,
+      type: item.type,
+      type_keywords: Enum.join(item.type_keywords, ", "),
+      url: item.url
+    }
+  end
+
+  defp form_data_extent(extent) do
+    if ArcGIS.Extent.is_empty?(extent) do
+      nil
+    else
+      "#{Enum.join(extent.northwest.coordinates, ", ")}, #{Enum.join(extent.southeast.coordinates, ", ")}"
+    end
+  end
+
+  defp lookup(map, key, default) do
     # || is used here, as if the map has the entry but it is
     # explicitly set to nil, Map.get/3 will return the nil value
     # rather than the default
@@ -175,18 +255,18 @@ defmodule ArcGIS.Portal.Item do
   @spec counts_from_map(map) :: counts
   defp counts_from_map(map) do
     %{
-      comments: from_map(map, "numComments", 0),
-      ratings: from_map(map, "numRatings", 0),
-      views: from_map(map, "numViews", 0)
+      comments: lookup(map, "numComments", 0),
+      ratings: lookup(map, "numRatings", 0),
+      views: lookup(map, "numViews", 0)
     }
   end
 
   @spec timestamps_from_map(map) :: ArcGIS.Timestamps.t()
   defp timestamps_from_map(map) do
     %ArcGIS.Timestamps{
-      created: from_map(map, "created", 0),
-      last_access: from_map(map, "lastViewed", 0),
-      modified: from_map(map, "modified", 0)
+      created: lookup(map, "created", 0),
+      last_access: lookup(map, "lastViewed", 0),
+      modified: lookup(map, "modified", 0)
     }
   end
 
