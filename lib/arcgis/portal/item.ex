@@ -231,6 +231,97 @@ defmodule ArcGIS.Portal.Item do
     )
   end
 
+  @spec update(Portal.t(), t() | [t()], [Portal.portal_option()]) :: %{
+          updates: [id :: String.t()],
+          failures: [{id :: String.t(), reason :: String.t()}]
+        }
+  def update(%Portal{} = portal, %__MODULE__{} = item, options) do
+    update(portal, [item], options)
+  end
+
+  def update(%Portal{} = portal, items, options) when is_list(items) do
+    resource = "/content/updateItems"
+    updates = Enum.map(items, fn item -> %{item.id => update_fields(item)} end)
+    params = %{items: :json.encode(updates)}
+    form_data = %{}
+    update_options = Keyword.merge(options, params: params, selector: ["results"])
+
+    case Portal.post(portal, resource, form_data, update_options) do
+      {:ok, results} ->
+        Enum.reduce(
+          results,
+          %{updates: [], failures: []},
+          fn %{
+               "itemId" => id,
+               "success" => success?
+             } = result,
+             acc ->
+            if success? do
+              %{acc | updates: [id | acc.updates]}
+            else
+              %{acc | failures: [{id, result["error"]} | acc.failures]}
+            end
+          end
+        )
+
+      error ->
+        error
+    end
+  end
+
+  @spec share(
+          Portal.t(),
+          t(),
+          share_with :: :everyone | :org | :private | (groups :: [String.t()]),
+          [Portal.portal_option()]
+        ) :: {:ok, t()} | {:error, reason :: String.t()}
+  def share(%Portal{} = portal, %__MODULE__{id: item_id} = item, share_with, options) do
+    resource = "/content/users/#{item.owner}/items/#{item_id}/share"
+
+    params =
+      case share_with do
+        :private -> %{groups: ""}
+        :everyone -> %{account: true, everyone: true}
+        :org -> %{org: true}
+        groups when is_list(groups) -> %{groups: Enum.join(groups, ",")}
+      end
+
+    form_data = %{}
+    update_options = Keyword.merge(options, params: params)
+
+    case Portal.post(portal, resource, form_data, update_options) do
+      {:ok, %{"itemId" => ^item_id, "notSharedWith" => []}} ->
+        {:ok, item}
+
+      {:ok, %{"itemId" => ^item_id, "notSharedWith" => unshared}} ->
+        {:error, "Could not share with: #{Enum.join(unshared, ",")}"}
+
+      error ->
+        error
+    end
+  end
+
+  defp update_fields(item) do
+    %{
+      accessInformation: item.accessInformation,
+      categories: item.categories,
+      culture: item.culture,
+      description: item.description,
+      documentation: item.documentation,
+      licenseInfo: item.licenseInfo,
+      name: item.name,
+      properties: item.properties,
+      proxyFilter: item.proxyFilter,
+      snippet: item.snippet,
+      tags: item.tags,
+      thumbnail: item.thumbnail,
+      title: item.title,
+      type: item.type,
+      typeKeywords: item.type_keywords,
+      url: item.url
+    }
+  end
+
   @spec from_map(map) :: t()
   @doc """
   Create an `%ArcGIS.Portal.Item{}` from a map. 
@@ -294,14 +385,14 @@ defmodule ArcGIS.Portal.Item do
   defp as_create_form_data(item) do
     %{
       accessInformation: item.accessInformation,
-      categories: Jason.encode!(item.categories),
+      categories: :json.encode(item.categories),
       culture: item.culture,
       description: item.description,
       documentation: item.documentation,
       extent: form_data_extent(item.extent),
       licenseInfo: item.licenseInfo,
       name: item.name,
-      properties: Jason.encode!(item.properties),
+      properties: :json.encode(item.properties),
       proxyFilter: item.proxyFilter,
       snippet: item.snippet,
       spatialReference: ArcGIS.SpatialReference.best_srid(item.spatial_reference),
