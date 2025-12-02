@@ -23,7 +23,7 @@ defmodule ArcGIS.Extent do
 
   def new(_), do: %__MODULE__{}
 
-  def is_empty?(%__MODULE__{} = extent) do
+  def empty?(%__MODULE__{} = extent) do
     extent.northwest.coordinates === []
   end
 end

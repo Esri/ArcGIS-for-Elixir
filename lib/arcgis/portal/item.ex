@@ -406,7 +406,7 @@ defmodule ArcGIS.Portal.Item do
   end
 
   defp form_data_extent(extent) do
-    if ArcGIS.Extent.is_empty?(extent) do
+    if ArcGIS.Extent.empty?(extent) do
       nil
     else
       "#{Enum.join(extent.northwest.coordinates, ", ")}, #{Enum.join(extent.southeast.coordinates, ", ")}"
