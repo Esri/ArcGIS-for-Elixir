@@ -156,8 +156,11 @@ defmodule ArcGIS.Portal.Item do
     end
   end
 
-  @spec delete(Portal.t(), t() | [t()], options :: [Portal.portal_option()]) ::
-          %{deletions: [String.t()], failures: [{id :: String.t(), reason :: String.t()}]}
+  @type deletion_results :: %{
+          deletions: [String.t()],
+          failures: [{id :: String.t(), reason :: String.t()}]
+        }
+  @spec delete(Portal.t(), t() | [t()], options :: [Portal.portal_option()]) :: deletion_results
   @doc "Deletes one or more portal items"
   def delete(%Portal{} = portal, %__MODULE__{} = item, options) do
     delete(portal, [item], options)
@@ -188,47 +191,52 @@ defmodule ArcGIS.Portal.Item do
         end
       )
 
-    Enum.reduce(
-      deletions,
-      %{deletions: [], failures: []},
-      fn {user, item_ids}, report ->
-        resource = "/content/users/#{user}/deleteItems"
-        form_data = %{}
-        params = %{items: Enum.join(item_ids, ",")}
-        delete_options = Keyword.merge(options, params: params, selector: ["results"])
+    Enum.reduce(deletions, %{deletions: [], failures: []}, fn batch, results ->
+      delete_batch(batch, portal, options, results)
+    end)
+  end
 
-        case Portal.post(portal, resource, form_data, delete_options) do
-          {:ok, results} ->
-            Enum.reduce(
-              results,
-              report,
-              fn %{"itemId" => id} = result, report ->
-                if Map.get(result, "success", false) do
-                  %{report | deletions: [id | report.deletions]}
-                else
-                  error =
-                    case Kernel.get_in(result, ["error", "message"]) do
-                      nil -> "Unknown"
-                      error -> error
-                    end
+  @spec delete_batch(
+          {user_id :: String.t(), item_ids :: [map]},
+          portal :: Portal.t(),
+          options :: [Portal.portal_option()],
+          deletion_results
+        ) :: deletion_results
+  defp delete_batch({user, item_ids}, portal, options, results) do
+    resource = "/content/users/#{user}/deleteItems"
+    # no body is used in this POST call
+    form_data = %{}
+    params = %{items: Enum.join(item_ids, ",")}
+    delete_options = Keyword.merge(options, params: params, selector: ["results"])
 
-                  %{report | failures: [{id, error} | report.failures]}
-                end
-              end
-            )
+    case Portal.post(portal, resource, form_data, delete_options) do
+      {:ok, body} ->
+        Enum.reduce(
+          body,
+          results,
+          &add_item_deletion_to_results/2
+        )
 
-          error ->
-            %{
-              report
-              | failures: [
-                  Enum.reduce(item_ids, report.failures, fn id, failures ->
-                    [{id, error} | failures]
-                  end)
-                ]
-            }
+      error ->
+        failures =
+          Enum.reduce(item_ids, results.failures, fn id, failures -> [{id, error} | failures] end)
+
+        %{results | failures: failures}
+    end
+  end
+
+  defp add_item_deletion_to_results(%{"itemId" => id} = item, results) do
+    if Map.get(item, "success", false) do
+      %{results | deletions: [id | results.deletions]}
+    else
+      error =
+        case Kernel.get_in(item, ["error", "message"]) do
+          nil -> "Unknown"
+          error -> error
         end
-      end
-    )
+
+      %{results | failures: [{id, error} | results.failures]}
+    end
   end
 
   @spec update(Portal.t(), t() | [t()], [Portal.portal_option()]) :: %{
@@ -251,16 +259,12 @@ defmodule ArcGIS.Portal.Item do
         Enum.reduce(
           results,
           %{updates: [], failures: []},
-          fn %{
-               "itemId" => id,
-               "success" => success?
-             } = result,
-             acc ->
-            if success? do
+          fn
+            %{"itemId" => id, "success" => true}, acc ->
               %{acc | updates: [id | acc.updates]}
-            else
+
+            %{"itemId" => id} = result, acc ->
               %{acc | failures: [{id, result["error"]} | acc.failures]}
-            end
           end
         )
 
@@ -324,7 +328,7 @@ defmodule ArcGIS.Portal.Item do
 
   @spec from_map(map) :: t()
   @doc """
-  Create an `%ArcGIS.Portal.Item{}` from a map. 
+  Create an `%ArcGIS.Portal.Item{}` from a map.
 
   Used internally to transform maps of data returned by an ArcGIS portal
   into item structs.

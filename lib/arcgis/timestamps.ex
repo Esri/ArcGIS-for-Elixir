@@ -1,9 +1,9 @@
 defmodule ArcGIS.Timestamps do
-  @moduledoc "Created and modified timestamps for an object"
+  @moduledoc "Creation, modification, last access timestamps for an object"
 
   # not included:
   #  * autoJoin
-  #  * 
+  #  *
   defstruct [:created, :last_access, :modified]
 
   @type timestamp :: non_neg_integer | nil
