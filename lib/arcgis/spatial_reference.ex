@@ -1,9 +1,10 @@
 defmodule ArcGIS.SpatialReference do
+  @moduledoc "An ArcGIS spatial reference"
   defstruct wkid: 0, alternatives: []
 
   @typedoc """
-  A struct representing a spatial references Consists of a well-known ID and a list of
-  synonymous IDs (if any).
+  A SpatialReference struct consists of a well-known ID and a list of
+  equivalent IDs (if any).
   """
   @type t :: %{wkid: non_neg_integer, alternatives: [non_neg_integer]}
 
