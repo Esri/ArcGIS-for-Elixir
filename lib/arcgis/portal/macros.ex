@@ -1,4 +1,6 @@
 defmodule ArcGIS.Portal.Macros do
+  @moduledoc false
+
   defmacro geometry_module_for(esri_type, geometry_module_string) do
     # to_string(geometry_atom)
     geometry_string = geometry_module_string
