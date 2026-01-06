@@ -70,7 +70,7 @@ defmodule ArcGIS.Portal do
 
   @spec discover(t(), options :: [portal_option]) :: {:ok, t()} | {:error, reason :: String.t()}
   @doc """
-  Discovers versions, deployment type, etc. about a portal and returns a new `%Portal{}` with this information
+  Discovers the version, type (`:online` or `:enterprise`), etc. of a portal and returns a new `%ArcGIS.Portal{}` with this information
   """
   def discover(%__MODULE__{} = portal, options \\ []) do
     case self(portal, options) do
