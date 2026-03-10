@@ -1,5 +1,3 @@
-#ifndef MIX_EXS
-#define MIX_EXS
 defmodule ArcGIS.MixProject do
   use Mix.Project
 
@@ -11,10 +9,11 @@ defmodule ArcGIS.MixProject do
       name: "ArcGIS",
       version: @version,
       elixir: "~> 1.18",
-      start_permanent: Mix.env() == :prod,
       deps: deps(),
       docs: docs(),
-      preferred_envs: [test_watch: :test],
+      package: package(),
+      preferred_cli_env: cli(),
+      test_coverage: [tool: ExCoveralls],
       elixirc_paths: elixirc_paths(Mix.env())
     ]
   end
@@ -40,10 +39,36 @@ defmodule ArcGIS.MixProject do
       {:geometry, "~> 1.0"},
 
       # dev depencencies
-      {:credo, "~> 1.0"},
-      {:ex_doc, "~> 0.34", only: :dev, runtime: false, warn_if_outdated: true},
-      {:mix_test_watch, "~> 1.0", only: [:dev, :test], runtime: false},
-      {:plug, "~> 1.0", only: [:test]}
+      {:mix_test_watch, ">= 0.0.0", only: [:dev, :test], runtime: false},
+      {:credo, "~> 1.6", only: [:dev, :test], runtime: false},
+      {:excoveralls, "~> 0.14", only: :test, runtime: false},
+      {:dialyxir, "~> 1.0", only: [:dev, :test], runtime: false},
+      {:ex_doc, ">= 0.0.0", only: [:dev, :test], runtime: false}
+    ]
+  end
+
+  def cli do
+    [
+      preferred_envs: [
+        coveralls: :test,
+        "coveralls.detail": :test,
+        "coveralls.github": :test,
+        "coveralls.html": :test,
+        "test.watch": :test
+      ]
+    ]
+  end
+
+  defp package do
+    [
+      description: "Esri ArcGIS web services",
+      maintainers: ["Aaron Seigo"],
+      licenses: ["MIT"],
+      links:
+        %{
+          #         "Changelog" => "https://hexdocs.pm/ical/changelog.html",
+          #         "GitHub" => @source_url
+        }
     ]
   end
 
@@ -64,4 +89,3 @@ defmodule ArcGIS.MixProject do
     ]
   end
 end
-#endif // MIX_EXS
