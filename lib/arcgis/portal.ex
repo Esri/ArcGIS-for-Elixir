@@ -195,7 +195,7 @@ defmodule ArcGIS.Portal do
         Keyword.get(options, :verify_tls) === false
 
     if no_tls do
-      [timeout: ArcGIS.default_query_timeout(), verify: :verify_none]
+      [timeout: ArcGIS.default_query_timeout(), transport_opts: [verify: :verify_none]]
     else
       [timeout: ArcGIS.default_query_timeout()]
     end
