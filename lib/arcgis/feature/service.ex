@@ -5,9 +5,9 @@ defmodule ArcGIS.Feature.Service do
   For fetching data from a feature service, see `ArcGIS.Feature`.
   """
 
+  alias __MODULE__.CreateParameters
   alias ArcGIS.Portal
   alias ArcGIS.Telemetry
-  alias __MODULE__.CreateParameters
 
   @cache_name :feature_service_urls
 

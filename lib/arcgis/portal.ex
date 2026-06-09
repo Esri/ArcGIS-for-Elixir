@@ -101,7 +101,7 @@ defmodule ArcGIS.Portal do
   Returns the default portal. The portal (if any) defined in the
   application configuration will be used, with ArcGIS Online used as the ultimate fallback.
   """
-  def default_portal() do
+  def default_portal do
     case Application.get_env(:arcgis, :portal) do
       %__MODULE__{} = portal -> portal
       _ -> new(@arcgis_online_baseurl)

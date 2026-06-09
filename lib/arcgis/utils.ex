@@ -78,7 +78,7 @@ defmodule ArcGIS.Utils do
 
   @doc "Prints all pending messages in the process mailbox to console"
   @spec flush() :: :ok
-  def flush() do
+  def flush do
     receive do
       msg ->
         # credo:disable-for-next-line
