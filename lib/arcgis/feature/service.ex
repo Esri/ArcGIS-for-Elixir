@@ -153,6 +153,16 @@ defmodule ArcGIS.Feature.Service do
     Map.put(acc, Inflex.camelize(key, :lower), capabilities_string)
   end
 
+  defp generate_create_document({:editor_tracking = key, true}, acc) do
+    value = %{
+      enableEditorTracking: true
+    }
+
+    Map.put(acc, "editorTrackingInfo", value)
+  end
+
+  defp generate_create_document({:editor_tracking, _}, acc), do: acc
+
   defp generate_create_document({key, value}, acc)
        when key in [
               :allow_geometry_updates,

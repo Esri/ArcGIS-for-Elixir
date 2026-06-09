@@ -15,7 +15,8 @@ defmodule ArcGIS.Feature.Service.CreateParameters do
     has_static_data: false,
     max_record_count: 50_000,
     folder_id: nil,
-    description: nil
+    description: nil,
+    editor_tracking: false
   ]
 
   @typedoc "Access capaibilties for the server"
@@ -31,6 +32,7 @@ defmodule ArcGIS.Feature.Service.CreateParameters do
           max_record_count: non_neg_integer,
           owner: String.t() | nil,
           folder_id: String.t() | nil,
-          description: String.t() | nil
+          description: String.t() | nil,
+          editor_tracking: boolean
         }
 end
