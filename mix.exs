@@ -34,6 +34,7 @@ defmodule ArcGIS.MixProject do
     [
       {:cachex, "~> 4.0"},
       {:inflex, "~> 2.0"},
+      {:plug, "~> 1.0"},
       {:req, "~> 0.5"},
       {:telemetry, "~> 1.0"},
       {:geometry, "~> 1.0"},
