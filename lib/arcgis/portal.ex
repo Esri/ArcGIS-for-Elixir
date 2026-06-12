@@ -190,15 +190,26 @@ defmodule ArcGIS.Portal do
   end
 
   defp transport_options(portal, options) do
+    app_transport_opts = Application.get_env(:arcgis, :tls_transport_opts, [])
+    request_transport_opts = Keyword.get(options, :transport_opts, [])
+
+    merged_transport_opts =
+      Keyword.merge(app_transport_opts, request_transport_opts)
+
     no_tls =
       portal.verify_tls === false or
         Keyword.get(options, :verify_tls) === false
 
-    if no_tls do
-      [timeout: ArcGIS.default_query_timeout(), transport_opts: [verify: :verify_none]]
-    else
-      [timeout: ArcGIS.default_query_timeout()]
-    end
+    base =
+      if no_tls do
+        [timeout: ArcGIS.default_query_timeout(), transport_opts: [verify: :verify_none]]
+      else
+        [timeout: ArcGIS.default_query_timeout(), transport_opts: []]
+      end
+
+    Keyword.update(base, :transport_opts, merged_transport_opts, fn existing ->
+      Keyword.merge(existing, merged_transport_opts)
+    end)
   end
 
   defp select(body, options) do

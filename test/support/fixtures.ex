@@ -2,6 +2,7 @@ defmodule ArcGIS.Test.Fixtures do
   @moduledoc false
 
   def portal(which \\ :base)
+
   def portal(:base) do
     ArcGIS.Portal.new("https://arcgis.com")
   end
