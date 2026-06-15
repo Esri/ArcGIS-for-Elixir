@@ -54,6 +54,6 @@ defmodule ArcGIS do
   Returns the configured default query timeout in millseconds. Defaults to 5 minutes.
   """
   def default_query_timeout do
-    Application.get_env(:arcgis, :default_query_timeoute, @five_minutes)
+    Application.get_env(:arcgis, :default_query_timeout, @five_minutes)
   end
 end
