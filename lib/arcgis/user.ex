@@ -104,8 +104,8 @@ defmodule ArcGIS.User do
       %{
         username: username,
         password: password,
-        client: ArcGIS.client_id(),
-        referer: referer(options)
+        client: ArcGIS.client_id() || "referer",
+        referer: referer(portal, options)
       }
 
     options = [selector: ["token"]]
@@ -116,8 +116,8 @@ defmodule ArcGIS.User do
     end
   end
 
-  defp referer(options) do
-    Keyword.get_lazy(options, :referer, &ArcGIS.client_id/0)
+  defp referer(portal, options) do
+    Keyword.get(options, :referer, portal.base_url)
   end
 
   defp from_map(raw) do
