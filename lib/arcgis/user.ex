@@ -64,7 +64,7 @@ defmodule ArcGIS.User do
           user_type: String.t()
         }
 
-  @spec from_token(Portal.t(), token :: String.t()) :: {:ok, map} | {:error, term}
+  @spec from_token(Portal.t(), token :: String.t()) :: {:ok, t()} | {:error, term}
   @doc """
   Given a portal and an auth token, returns the information related to the user account
   associated with the token, if any.
