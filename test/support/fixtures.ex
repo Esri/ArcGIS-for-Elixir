@@ -4,7 +4,8 @@ defmodule ArcGIS.Test.Fixtures do
   def portal(which \\ :base)
 
   def portal(:base) do
-    ArcGIS.Portal.new("https://arcgis.com")
+    {:ok, portal} = ArcGIS.Portal.new("https://arcgis.com")
+    portal
   end
 
   def portal(:discovered) do
