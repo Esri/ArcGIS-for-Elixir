@@ -3,7 +3,7 @@
 Convenient access to Esri ArcGIS APIs for Elixir applications.
 
 ```elixir
-{:ok, portal} = "https://arcgis.com" |> ArcGIS.Portal.new() |> ArcGIS.Portal.discover()
+{:ok, portal} = ArcGIS.Portal.discover("https://arcgis.com")
 {:ok, portal_info} = ArcGIS.Portal.self(portal)
 
 {:ok, session_token} = ArcGIS.User.generate_token(user, password, portal)
