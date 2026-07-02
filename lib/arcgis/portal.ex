@@ -72,11 +72,14 @@ defmodule ArcGIS.Portal do
     _error -> {:error, "Bad portal #{inspect(url)}"}
   end
 
-  @spec discover(t(), options :: [portal_option]) :: {:ok, t()} | {:error, reason :: String.t()}
+  @spec discover((portal_url :: String.t()) | t(), options :: [portal_option]) ::
+          {:ok, t()} | {:error, reason :: String.t()}
   @doc """
   Discovers the version, type (`:online` or `:enterprise`), etc. of a portal and returns a new `%ArcGIS.Portal{}` with this information
   """
-  def discover(%__MODULE__{} = portal, options \\ []) do
+  def discover(portal, options \\ [])
+
+  def discover(%__MODULE__{} = portal, options) do
     case self(portal, options) do
       {:ok, self} ->
         {
@@ -91,6 +94,13 @@ defmodule ArcGIS.Portal do
 
       error ->
         error
+    end
+  end
+
+  def discover(portal_url, options) when is_binary(portal_url) do
+    case new(portal_url) do
+      {:ok, portal} -> discover(portal, options)
+      error -> error
     end
   end
 
