@@ -64,9 +64,13 @@ defmodule ArcGIS.Portal do
 
   @arcgis_online_baseurl "https://arcgis.com/"
 
-  @spec new(url :: String.t()) :: t()
+  @spec new(url :: String.t()) :: {:ok, t()} | {:error, reason :: String}
   @doc "Create a `t:Portal.t/0` from its base URL."
-  def new(url), do: %__MODULE__{base_url: URI.new!(url)}
+  def new(url) do
+    {:ok, %__MODULE__{base_url: URI.new!(url)}}
+  rescue
+    _error -> {:error, "Bad portal #{inspect(url)}"}
+  end
 
   @spec discover(t(), options :: [portal_option]) :: {:ok, t()} | {:error, reason :: String.t()}
   @doc """
