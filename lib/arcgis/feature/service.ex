@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
- defmodule ArcGIS.Feature.Service do
+defmodule ArcGIS.Feature.Service do
   @moduledoc """
   Feature service acccess.
 
@@ -37,7 +37,7 @@
           id: String.t()
         }
 
-  @spec create(Portal.t(), CreateParameters.t(), options :: Keyword.t()) ::
+  @spec create(Portal.t(), CreateParameters.t(), options :: Portal.portal_options()) ::
           {:ok, t()} | {:error, reason :: String.t()}
   def create(%Portal{} = portal, %CreateParameters{} = parameters, options) do
     # TODO: support the following? tags, snippet, overwrite, isView
@@ -86,8 +86,15 @@
     end
   end
 
-  @spec get(t(), resource :: String.t(), options :: Keyword.t()) ::
+  @spec get(t(), resource :: String.t(), options :: Portal.portal_options()) ::
           {:ok, map} | {:error, reason :: String.t()}
+  @doc """
+  Sends a GET request to a feature service.
+
+  The resource is path fragment for the rquest (e.g. `/applyEdits`).
+
+  Authentication tokens, etc. can be passed in via the options parameter.
+  """
   def get(%__MODULE__{} = service, resource, options \\ []) do
     case resource_url(service, resource, options) do
       {:error, _} = error -> error
@@ -95,8 +102,15 @@
     end
   end
 
-  @spec post(t(), resource :: String.t(), form_data :: map, options :: Keyword.t()) ::
+  @spec post(t(), resource :: String.t(), form_data :: map, options :: Portal.portal_options()) ::
           {:ok, map} | {:error, reason :: String.t()}
+  @doc """
+  Sends a POST request to a feature service.
+
+  The resource is path fragment for the rquest (e.g. `/applyEdits`).
+
+  Authentication tokens, etc. can be passed in via the options parameter.
+  """
   def post(%__MODULE__{} = service, resource, form_data, options \\ []) do
     case resource_url(service, resource, options) do
       {:error, _} = error -> error
