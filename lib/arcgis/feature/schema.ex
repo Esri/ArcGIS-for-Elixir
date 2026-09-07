@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
- defmodule ArcGIS.Feature.Schema do
+defmodule ArcGIS.Feature.Schema do
   @moduledoc """
   The tables and layers in a feature service.
   """
