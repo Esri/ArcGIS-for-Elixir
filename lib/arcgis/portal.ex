@@ -76,7 +76,7 @@ defmodule ArcGIS.Portal do
           {:selector, [term()]} | {:transform, transform_fn} | {:verify_tls, boolean}
   @type form_data :: map
 
-  @arcgis_online_baseurl "https://arcgis.com/"
+  @arcgis_online_baseurl URI.new!("https://arcgis.com/")
 
   @spec new(url :: String.t()) :: {:ok, t()} | {:error, reason :: String}
   @doc "Create a `t:Portal.t/0` from its base URL."
@@ -132,7 +132,7 @@ defmodule ArcGIS.Portal do
   def default_portal do
     case Application.get_env(:arcgis, :portal) do
       %__MODULE__{} = portal -> portal
-      _ -> new(@arcgis_online_baseurl)
+      _ -> {:ok, %__MODULE__{base_url: @arcgis_online_baseurl, type: :online}}
     end
   end
 
