@@ -153,7 +153,10 @@ defmodule ArcGIS.Feature.Service do
   @spec fetch_and_cache_url(t(), options :: Portal.portal_options()) ::
           {:ok, String.t()} | {:error, term}
   defp fetch_and_cache_url(service, options) do
-    options = [auth_token: Keyword.get(options, :auth_token, "")]
+    options = [
+      auth_token: Keyword.get(options, :auth_token, ""),
+      verify_tls: Keyword.get(options, :verify_tls)
+    ]
 
     case Portal.Item.get(service.portal, service.id, options) do
       {:ok, %{url: url}} ->
