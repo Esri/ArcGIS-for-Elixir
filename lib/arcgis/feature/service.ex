@@ -26,7 +26,7 @@ defmodule ArcGIS.Feature.Service do
   @cache_name :feature_service_urls
 
   @enforce_keys [:id]
-  defstruct [:portal, :id]
+  defstruct [:portal, :id, :schema]
 
   @typedoc """
   Definition of a feature service including the Portal it is hosted on and the Feature Service's ID
@@ -34,7 +34,8 @@ defmodule ArcGIS.Feature.Service do
 
   @type t() :: %__MODULE__{
           portal: Portal.t(),
-          id: String.t()
+          id: String.t(),
+          schema: nil | ArcGIS.Schema.t()
         }
 
   @spec create(Portal.t(), CreateParameters.t(), options :: Portal.portal_options()) ::
@@ -133,7 +134,24 @@ defmodule ArcGIS.Feature.Service do
     end
   end
 
-  @spec fetch_and_cache_url(t(), options :: Keyword.t()) :: {:ok, String.t()} | {:error, term}
+  @doc """
+  Fetches the schema for a feature servcie and on success assigned it to the
+  `schema` field of the `Service.t()`
+  """
+  @spec with_schema(t(), options :: Portal.portal_options()) :: t()
+  def with_schema(service, options \\ [])
+
+  def with_schema(%__MODULE__{schema: nil} = service, options) do
+    case ArcGIS.Feature.Schema.get(service, options) do
+      {:ok, schema} -> %{service | schema: schema}
+      _ -> service
+    end
+  end
+
+  def with_schema(service, _options), do: service
+
+  @spec fetch_and_cache_url(t(), options :: Portal.portal_options()) ::
+          {:ok, String.t()} | {:error, term}
   defp fetch_and_cache_url(service, options) do
     options = [auth_token: Keyword.get(options, :auth_token, "")]
 
