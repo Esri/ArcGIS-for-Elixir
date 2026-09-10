@@ -1,6 +1,7 @@
 # ArcGIS for Elixir
 
-Convenient access to Esri ArcGIS APIs for Elixir applications.
+Convenient access to Esri ArcGIS APIs for applications written in the [Elixir](https://elixir-lang.org)
+programming language.
 
 ```elixir
 {:ok, portal} = ArcGIS.Portal.discover("https://arcgis.com")
@@ -13,6 +14,7 @@ service_params = %ArcGIS.Feature.Service.CreateParameters{name: "ExArcTest4"}
 
 {:ok, features} = ArcGIS.Feature.query(service, 0, limit: 2000, auth_token: session_token, geometry?: true)
 ```
+
 ## Features
 
 * Portal
