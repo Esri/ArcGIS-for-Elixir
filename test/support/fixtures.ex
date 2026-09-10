@@ -11,7 +11,7 @@ defmodule ArcGIS.Test.Fixtures do
   def portal(:discovered) do
     portal(:base)
     |> Map.put(:type, :online)
-    |> Map.put(:version, {2025, 3})
+    |> Map.put(:version, {2026, 3})
     |> Map.put(:help_url, URI.new!("https://doc.arcgis.com/en/arcgis-online/"))
   end
 
