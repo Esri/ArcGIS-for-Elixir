@@ -88,7 +88,7 @@ defmodule ArcGIS.User.Group do
       owner: Map.get(group, "owner", ""),
       tags: Map.get(group, "tags", []),
       read_only?: Map.get(group, "isReadOnly", false),
-      thumbail: Map.get("thumnbnail", %{}),
+      thumbail: Map.get(group, "thumbnail", %{}),
       timestamps: timestamps_from_map(group),
       title: Map.get(group, "title", ""),
       view_only?: Map.get(group, "isViewOnly", false)
