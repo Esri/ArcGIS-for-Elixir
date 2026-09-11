@@ -211,7 +211,6 @@ defmodule ArcGIS.Feature.Service do
   end
 
   defp generate_create_document({:editor_tracking, _}, acc), do: acc
-  defp generate_create_document({_, nil}, acc), do: acc
 
   defp generate_create_document({key, value}, acc)
        when key in [
@@ -226,4 +225,5 @@ defmodule ArcGIS.Feature.Service do
     Map.put(acc, Inflex.camelize(key, :lower), value)
   end
 
+  defp generate_create_document(_, acc), do: acc
 end
