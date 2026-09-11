@@ -16,7 +16,6 @@ defmodule ArcGIS.Portal do
   @moduledoc """
   An ArcGIS Portal. This may refer to an ArcGIS Online endpoint or an ArcGIS Enterprise installation.
   """
-  require Logger
   require ArcGIS.Portal.Macros
 
   alias ArcGIS.Portal.Macros
