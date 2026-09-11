@@ -49,7 +49,7 @@ defmodule ArcGIS.Feature.Service do
 
         is_binary(Keyword.get(options, :auth_token)) ->
           {:ok, user} = ArcGIS.User.from_token(portal, Keyword.get(options, :auth_token))
-          user.names.username
+          user.name.user
       end
 
     default_params = %{"supportedQueryFormats" => "JSON", "owner" => owner}
