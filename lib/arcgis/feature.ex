@@ -128,21 +128,24 @@ defmodule ArcGIS.Feature do
     Enum.map(features, fn feature -> sanitize_feature(feature, field_types, portal_type) end)
   end
 
+  defp sanitize_feature(%{attributes: attributes} = feature, field_types, portal_type) do
+    %{feature | "attributes" => sanitize_attributes(attributes, field_types, portal_type)}
+  end
+
   defp sanitize_feature(%{"attributes" => attributes} = feature, field_types, portal_type) do
     %{feature | "attributes" => sanitize_attributes(attributes, field_types, portal_type)}
   end
 
   defp sanitize_attributes(attributes, field_types, portal_type) do
-    # TODO: schema adherence
     Enum.reduce(attributes, %{}, fn {key, value}, acc ->
       sanitize_attribute(key, value, field_types, portal_type, acc)
     end)
   end
 
   defp sanitize_attribute(key, value, field_types, portal_type, acc) when is_binary(key) do
-    # TODO: check other types, e.g. dates, etc?
+    # TODO: check other types, e.g. dates, etc.
     value =
-      case Map.get(field_types, key) do
+      case Map.get(field_types, to_string(key)) do
         "esriFieldTypeGlobalID" -> wrap_global_id(value, portal_type)
         _ -> value
       end
