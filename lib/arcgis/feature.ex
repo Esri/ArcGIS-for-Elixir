@@ -108,7 +108,7 @@ defmodule ArcGIS.Feature do
   end
 
   @spec sanitize(features :: [t()], layer_id :: non_neg_integer, service :: Service.t()) :: [t()]
-  @doc "Conforms a list of feature to ArcGIS requirements, making them appropriate for e.g. use in mutations"
+  @doc "Conforms a list of features to ArcGIS requirements, making them appropriate for e.g. use in mutations"
   def sanitize(features, _layer_id, %Service{schema: nil}) do
     features
   end
@@ -291,7 +291,18 @@ defmodule ArcGIS.Feature do
     Enum.map(features, fn feature -> normalize_feature(feature, global_id_fields) end)
   end
 
+  defp normalize_feature(%{attributes: attrs} = feature, fields) do
+    normalize_feature_attributes(feature, attrs, fields)
+  end
+
   defp normalize_feature(%{"attributes" => attrs} = feature, fields) do
+    feature
+    |> Map.put(:attributes, attrs)
+    |> Map.delete("attributes")
+    |> normalize_feature_attributes(attrs, fields)
+  end
+
+  defp normalize_feature_attributes(feature, attrs, fields) do
     normalized_attrs =
       Enum.reduce(
         fields,
@@ -301,7 +312,7 @@ defmodule ArcGIS.Feature do
         end
       )
 
-    %{feature | "attributes" => normalized_attrs}
+    %{feature | attributes: normalized_attrs}
   end
 
   defp unwrap_global_id("{" <> rest) do
