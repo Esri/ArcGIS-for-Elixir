@@ -129,7 +129,7 @@ defmodule ArcGIS.Feature do
   end
 
   defp sanitize_feature(%{attributes: attributes} = feature, field_types, portal_type) do
-    %{feature | "attributes" => sanitize_attributes(attributes, field_types, portal_type)}
+    %{feature | attributes: sanitize_attributes(attributes, field_types, portal_type)}
   end
 
   defp sanitize_feature(%{"attributes" => attributes} = feature, field_types, portal_type) do
