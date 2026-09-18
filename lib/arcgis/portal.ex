@@ -53,6 +53,7 @@ defmodule ArcGIS.Portal do
   @type aggregate_type :: :avg | :count | :max | :min | :sum
   @type aggregate :: %{type: aggregate_type, field: String.t(), name: String.t()}
   @type response_format :: :geojson | :htmnl | :json | :pbf
+  @type order_by_field :: :atom | String.t() | {:atom | String.t(), :asc | :desc}
   @type query_option ::
           {:is_features_query?, :boolean}
           | {:aggregates, [aggregate]}
@@ -60,6 +61,7 @@ defmodule ArcGIS.Portal do
           | {:geometry?, boolean}
           | {:limit, non_neg_integer()}
           | {:offset, non_neg_integer()}
+          | {:order_by, order_by_field() | [order_by_field]}
           | {:response_format, response_format}
           | {:where, String.t()}
   @type request_option :: portal_option | query_option
@@ -392,8 +394,24 @@ defmodule ArcGIS.Portal do
       resultRecordCount: Keyword.get(options, :limit) |> Utils.to_integer(10),
       resultOffset: Keyword.get(options, :offset) |> Utils.to_integer(0)
     }
+    |> add_order_by(Keyword.get(options, :order_by))
     |> add_aggregates(Keyword.get(options, :aggregates))
   end
+
+  defp add_order_by(args, nil), do: args
+
+  defp add_order_by(args, order_by_list) do
+    order_by =
+      List.wrap(order_by_list)
+      |> Enum.map(&to_order_by_field/1)
+      |> Enum.join(", ")
+
+    Map.put(args, :orderByFields, order_by)
+  end
+
+  defp to_order_by_field({field_name, :asc}), do: "#{field_name} ASC"
+  defp to_order_by_field({field_name, :desc}), do: "#{field_name} DESC"
+  defp to_order_by_field(field_name), do: to_string(field_name)
 
   defp add_aggregates(args, nil), do: args
 
