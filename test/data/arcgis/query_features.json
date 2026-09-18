@@ -1,0 +1,89 @@
+{
+  "geometryProperties": {
+    "shapeAreaFieldName": "Shape__Area",
+    "shapeLengthFieldName": "Shape__Length",
+    "units": "esriMeters"
+  },
+  "features": [
+    {
+      "attributes": {
+        "StartDate": 1568366635219,
+        "EndDate": 1568366635219,
+        "EventName": "Alexandria",
+        "PlanningMethod": "zoning",
+        "Description": "The Alexandria Safe-Zone is a walled-off community located in Alexandria, Virginia, near Washington, D.C",
+        "MetricsDashboardCharts": [
+          {
+            "metricID": "fc055c6e-3567-4979-84a4-f19e4458069b",
+            "visible": true,
+            "chartStyle": "HorizontalBarChart",
+            "icon": "Cross",
+            "metricVersion": "Basic"
+          },
+          {
+            "metricID": "fc055c6e-3567-4979-84a4-f19e4458069c",
+            "visible": false,
+            "chartStyle": "SortedListChart",
+            "icon": "Heart",
+            "metricVersion": "Basic"
+          },
+          {
+            "metricID": "0f67e4ac-ce7f-4a8a-8de0-433d2053a777",
+            "visible": true,
+            "chartStyle": "NumberChart",
+            "icon": "Bike",
+            "metricVersion": "Basic"
+          },
+          {
+            "metricID": "fc055c6e-3567-4979-84a4-f19e4458069d",
+            "visible": true,
+            "chartStyle": "NumberChart",
+            "icon": "Cross",
+            "metricVersion": "Basic"
+          }
+        ],
+        "CustomID": "customID",
+        "WebpageUrl": "https://www.amc.com/shows/the-walking-dead",
+        "Featured": true,
+        "MetricVersion": "Basic",
+        "GlobalID": "39e18289-922e-4e7c-b2a0-ca1a7719eb14",
+        "EventType": "plan"
+      },
+      "geometry": {
+        "rings": [
+          [
+            [
+              949332.9346909879,
+              6004342.691387348
+            ],
+            [
+              949668.7941931228,
+              6004127.738785604
+            ],
+            [
+              949473.5009011538,
+              6003874.020407665
+            ],
+            [
+              949221.5805031309,
+              6004072.724546093
+            ],
+            [
+              949332.9346909879,
+              6004342.691387348
+            ]
+          ]
+        ],
+        "spatialReference": {
+          "wkid": 3857
+        }
+      }
+    }
+  ],
+  "spatialReference": {
+    "wkid": 3857
+  },
+  "exceededTransferLimit": false,
+  "objectIdFieldName": "OBJECTID",
+  "geometryType": "esriGeometryPolygon"
+}

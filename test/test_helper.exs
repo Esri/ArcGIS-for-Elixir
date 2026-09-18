@@ -22,10 +22,6 @@ defmodule ArcGIS.Test.Helper do
       alias ArcGIS.Test.Helper
     end
   end
-
-  def load_data(name) do
-    File.read!("test/data/#{name}")
-  end
 end
 
 Application.put_env(:arcgis, :req_defaults, plug: {Req.Test, ArcGIS})

@@ -1,6 +1,26 @@
 defmodule ArcGIS.Test.Fixtures do
   @moduledoc false
 
+  def test_json(name, scope \\ :arcgis) do
+    name
+    |> test_data(scope)
+    |> JSON.decode!()
+  end
+
+  def test_data(name, scope \\ :arcgis) do
+    name
+    |> test_data_path(scope)
+    |> File.read!()
+  end
+
+  def test_data_path(name, :arcgis) do
+    Path.join("test/data/arcgis", name)
+  end
+
+  def test_data_path(name, _) do
+    Path.join("test/data", name)
+  end
+
   def portal(which \\ :base)
 
   def portal(:base) do
@@ -13,6 +33,15 @@ defmodule ArcGIS.Test.Fixtures do
     |> Map.put(:type, :online)
     |> Map.put(:version, {2026, 3})
     |> Map.put(:help_url, URI.new!("https://doc.arcgis.com/en/arcgis-online/"))
+  end
+
+  def feature_service(which \\ :default)
+
+  def feature_service(:default) do
+    %ArcGIS.Feature.Service{
+      id: "test-feature-service",
+      portal: portal(:discovered)
+    }
   end
 
   def user do

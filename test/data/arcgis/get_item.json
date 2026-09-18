@@ -1,0 +1,69 @@
+{
+  "appCategories": [],
+  "url": "https://services.example.test/arcgis/rest/services/66a0fa165d1649ce8048e64e3fb61504/FeatureServcer",
+  "access": "private",
+  "properties": {
+    "master": "2bea02d3a68142c7b4a4bb06ae8dbae0",
+    "publicView": "1244f9373a9340f38533fd1a8ff962a3",
+    "version": "5.0.0"
+  },
+  "subInfo": 0,
+  "culture": "*",
+  "numViews": 2,
+  "apiToken2ExpirationDate": -1,
+  "lastViewed": 1709042400000,
+  "largeThumbnail": null,
+  "ownerId": "ad61b33cde1b4be195b8bdaba90a589d",
+  "description": null,
+  "owner": "urban_aaron_dev",
+  "size": 64,
+  "tags": [],
+  "modified": 1705568157000,
+  "numRatings": 0,
+  "created": 1705568116000,
+  "itemControl": "admin",
+  "name": null,
+  "numComments": 0,
+  "avgRating": 0,
+  "guid": null,
+  "licenseInfo": null,
+  "advancedSettings": null,
+  "spatialReference": "102100",
+  "listed": false,
+  "type": "Urban Model",
+  "banner": null,
+  "orgId": "r0I0JKe3OLRdkKyK",
+  "proxyFilter": null,
+  "scoreCompleteness": 16,
+  "categories": [],
+  "commentsEnabled": true,
+  "documentation": null,
+  "accessInformation": null,
+  "groupDesignations": null,
+  "typeKeywords": [
+    "Urban",
+    "Urban-Model"
+  ],
+  "screenshots": [],
+  "ownerFolder": null,
+  "snippet": null,
+  "classification": null,
+  "id": "66a0fa165d1649ce8048e64e3fb61504",
+  "apiToken1ExpirationDate": -1,
+  "protected": false,
+  "title": "Testing Async",
+  "extent": [
+    [
+      5.952605381842136,
+      45.82037021294237
+    ],
+    [
+      10.49172963042796,
+      47.81009886898107
+    ]
+  ],
+  "languages": [],
+  "industries": [],
+  "isOrgItem": true,
+  "thumbnail": null
+}
