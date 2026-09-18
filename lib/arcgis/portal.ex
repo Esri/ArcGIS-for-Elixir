@@ -336,7 +336,7 @@ defmodule ArcGIS.Portal do
       |> to_string()
 
     params =
-      query_parameters(options, Keyword.get(options, :is_features_query?, true))
+      query_parameters(options, Keyword.get(options, :is_features_query?, false))
       |> Map.put(:clientId, client_id(options))
       |> Map.put(:f, response_format(options))
       |> Map.merge(Keyword.get(options, :params, %{}))
