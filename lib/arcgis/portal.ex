@@ -399,10 +399,12 @@ defmodule ArcGIS.Portal do
   end
 
   defp add_order_by(args, nil), do: args
+  defp add_order_by(args, []), do: args
 
-  defp add_order_by(args, order_by_list) do
+  defp add_order_by(args, order_by_arg) do
     order_by =
-      List.wrap(order_by_list)
+      order_by_arg
+      |> List.wrap()
       |> Enum.map(&to_order_by_field/1)
       |> Enum.join(", ")
 
