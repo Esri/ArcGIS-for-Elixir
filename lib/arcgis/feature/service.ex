@@ -69,11 +69,7 @@ defmodule ArcGIS.Feature.Service do
 
     resource = "/content/users/#{owner}#{folder}/createService"
 
-    request_options =
-      options
-      |> Keyword.put(:is_features_query?, false)
-
-    case Portal.post(portal, resource, form_data, request_options) do
+    case Portal.post(portal, resource, form_data, options) do
       {:ok, %{"itemId" => id, "serviceurl" => url}} ->
         service = %__MODULE__{portal: portal, id: id}
         cache(service, url)
