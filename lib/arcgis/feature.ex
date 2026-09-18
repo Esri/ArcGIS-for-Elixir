@@ -60,7 +60,10 @@ defmodule ArcGIS.Feature do
   @doc "Query features in a Feature Service layer or table"
   def query(%Service{} = feature_service, layer_id, options \\ [])
       when is_number(layer_id) and layer_id >= 0 do
-    options = Keyword.put(options, :transform, &__MODULE__.from_map/2)
+    options =
+      options
+      |> Keyword.put(:transform, &__MODULE__.from_map/2)
+      |> Keyword.put(:is_features_query?, true)
 
     Service.post(feature_service, "/#{layer_id}/query", [], options)
     |> normalize_results(feature_service, layer_id, options)
@@ -100,6 +103,7 @@ defmodule ArcGIS.Feature do
       |> Keyword.put(:telemetry, %Telemetry{
         metadata: %{service: service, action: :mutate_features}
       })
+      |> Keyword.put(:is_features_query?, true)
 
     # TODO: support PBF formats
     document = [edits: document]
