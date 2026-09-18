@@ -10,11 +10,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   * Add a `schema` field to `ArcGIS.Feature.Service`
   * Add `ArcGIS.Feature.Service.with_schema/1` to fetch and store a feature service schema
   * Support ArcGIS Enterprise
+  * Add `order_by` to the list of supported query parameters
 * Fixes
   * Fix service URL caching when the `verify_tls` is false
 * Janitorial
   * More documentation and some improved typing
-  
+
 ## v0.1.1
 
 * Fixes
