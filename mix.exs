@@ -2,6 +2,7 @@ defmodule ArcGIS.MixProject do
   use Mix.Project
 
   @version "0.2.0"
+  @source_url "https://github.com/ArcGIS/ArcGIS-for-Elixir"
 
   def project do
     [
@@ -63,20 +64,20 @@ defmodule ArcGIS.MixProject do
   defp package do
     [
       description: "Esri ArcGIS web services",
-      maintainers: ["Aaron Seigo"],
+      maintainers: ["Aaron Seigo <aseigo@esri.com>", "Niklas Hofmann <nhofmann@esri.com>"],
       licenses: ["MIT"],
-      links:
-        %{
-          #         "Changelog" => "https://hexdocs.pm/ical/changelog.html",
-          #         "GitHub" => @source_url
-        }
+      links: %{
+        "Changelog" => "https://hexdocs.pm/arcgis/changelog.html",
+        "GitHub" => @source_url
+      }
     ]
   end
 
   defp docs do
     [
-      extras: ["README.md"],
+      extras: ["CHANGELOG.md", "README.md"],
       main: "readme",
+      source_url: @source_url,
       source_ref: "v#{@version}",
       formatters: ["html"],
       groups_for_modules: [
