@@ -13,8 +13,25 @@
 # limitations under the License.
 
 defmodule ArcGIS.Test.Portal do
-  use ArcGIS.Test.Helper
+  use ArcGIS.Test.Helper, async: true
   doctest ArcGIS.Portal
+
+  describe "derfault_portal/1" do
+    test "returns a default is nothing is configured" do
+      Application.delete_env(:arcgis, :portal)
+      assert %ArcGIS.Portal{} = ArcGIS.Portal.default_portal()
+    end
+
+    test "returns the configured portal" do
+      Application.put_env(:arcgis, :portal, %ArcGIS.Portal{
+        base_url: URI.parse("https://example.com"),
+        type: :custom
+      })
+
+      assert %ArcGIS.Portal{base_url: %URI{host: "example.com"}, type: :custom} =
+               ArcGIS.Portal.default_portal()
+    end
+  end
 
   test "discover/1 returns a %Portal{} with full information" do
     Req.Test.stub(ArcGIS, fn conn ->

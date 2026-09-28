@@ -133,7 +133,7 @@ defmodule ArcGIS.Portal do
   def default_portal do
     case Application.get_env(:arcgis, :portal) do
       %__MODULE__{} = portal -> portal
-      _ -> {:ok, %__MODULE__{base_url: @arcgis_online_baseurl, type: :online}}
+      _ -> %__MODULE__{base_url: @arcgis_online_baseurl, type: :online}
     end
   end
 
