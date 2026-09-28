@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.2.1
+
+* Fixes
+  * `ArcGIS.Portal.default_portal` returns an `%ArcGIS.Portal{}` struct in all cases, without `:ok` tuple wrapping. 
+    The typespec already noted this, but the function implementation di dnot follow that typing.
+
 ## v0.2.0
 
 * Improvements
