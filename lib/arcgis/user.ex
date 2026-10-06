@@ -122,11 +122,10 @@ defmodule ArcGIS.User do
         referer: referer(portal, options)
       }
 
-    options = [selector: ["token"]]
-
-    case Portal.post(portal, resource, form_data, options) do
-      {:ok, token} -> {:ok, token}
-      error -> error
+    case Portal.post(portal, resource, form_data) do
+      {:ok, %{"token" => token}} -> {:ok, token}
+      {:error, _error} = error -> error
+      _ -> {:error, "Unable to generate token"}
     end
   end
 

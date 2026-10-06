@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
- defmodule ArcGIS.Portal.Item do
+defmodule ArcGIS.Portal.Item do
   @moduledoc """
   Provides a struct for ArcGIS portal items and means to fetch and query them.
   """
@@ -138,7 +138,6 @@
   def get(%Portal{} = portal, id, options \\ []) when is_binary(id) do
     all_options =
       options
-      |> Keyword.delete(:selector)
       |> Keyword.merge(
         is_features_query?: false,
         transform: &__MODULE__.from_map/1
@@ -158,11 +157,8 @@
 
     form_data = as_create_form_data(item)
 
-    # options = Keyword.put(options, :transform, &__MODULE__.from_map/1)
-    create_options = Keyword.put(options, :selector, ["id"])
-
-    case Portal.post(portal, resource, form_data, create_options) do
-      {:ok, id} ->
+    case Portal.post(portal, resource, form_data, options) do
+      {:ok, %{"id" => id}} ->
         get(portal, id, options)
 
       error ->
@@ -221,22 +217,29 @@
     # no body is used in this POST call
     form_data = %{}
     params = %{items: Enum.join(item_ids, ",")}
-    delete_options = Keyword.merge(options, params: params, selector: ["results"])
+    delete_options = Keyword.merge(options, params: params)
 
     case Portal.post(portal, resource, form_data, delete_options) do
-      {:ok, body} ->
+      {:ok, %{"results" => batch_results}} ->
         Enum.reduce(
-          body,
+          batch_results,
           results,
           &add_item_deletion_to_results/2
         )
 
-      error ->
-        failures =
-          Enum.reduce(item_ids, results.failures, fn id, failures -> [{id, error} | failures] end)
+      {:error, error} ->
+        add_errors(error, item_ids, results)
 
-        %{results | failures: failures}
+      _ ->
+        add_errors("Query failed", item_ids, results)
     end
+  end
+
+  defp add_errors(error, item_ids, results) do
+    failures =
+      Enum.reduce(item_ids, results.failures, fn id, failures -> [{id, error} | failures] end)
+
+    %{results | failures: failures}
   end
 
   defp add_item_deletion_to_results(%{"itemId" => id} = item, results) do
@@ -266,10 +269,10 @@
     updates = Enum.map(items, fn item -> %{item.id => update_fields(item)} end)
     params = %{items: :json.encode(updates)}
     form_data = %{}
-    update_options = Keyword.merge(options, params: params, selector: ["results"])
+    update_options = Keyword.merge(options, params: params)
 
     case Portal.post(portal, resource, form_data, update_options) do
-      {:ok, results} ->
+      {:ok, %{"results" => results}} ->
         Enum.reduce(
           results,
           %{updates: [], failures: []},
@@ -282,8 +285,11 @@
           end
         )
 
-      error ->
+      {:error, _reason} = error ->
         error
+
+      _ ->
+        {:error, "Query failed"}
     end
   end
 
