@@ -4,10 +4,24 @@ All notable changes to this project will be documented in this file.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v1.0.0
+
+* Improvements
+  * Increased API consistency (e.g. `%ArcGIS.Portal` is always the first parameter in a function)
+  * Simplified `Portal.post` and `Portal.get` by removing the `selector` option.
+* Janitorial
+  * Updated some of the typespecs for accuracy
+
+Breaking changes in this version:
+
+* `ArcGIS.User.generate_token` now takes a portal as the first parameter, rather than the third
+* `selector` is no longer an option for get or put operations. Pattern match on the return value from
+  `Portal.get` or `Portal.put` to get the same effect.
+
 ## v0.2.1
 
 * Fixes
-  * `ArcGIS.Portal.default_portal` returns an `%ArcGIS.Portal{}` struct in all cases, without `:ok` tuple wrapping. 
+  * `ArcGIS.Portal.default_portal` returns an `%ArcGIS.Portal{}` struct in all cases, without `:ok` tuple wrapping.
     The typespec already noted this, but the function implementation di dnot follow that typing.
 
 ## v0.2.0
