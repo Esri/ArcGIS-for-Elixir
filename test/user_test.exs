@@ -39,7 +39,7 @@ defmodule ArcGIS.Test.User do
       Req.Test.json(conn, Fixtures.Network.json("token_success"))
     end)
 
-    assert {:ok, token} = ArcGIS.User.generate_token("user", "pass", Fixtures.portal())
+    assert {:ok, token} = ArcGIS.User.generate_token(Fixtures.portal(), "user", "pass")
     assert is_binary(token)
   end
 
@@ -50,6 +50,6 @@ defmodule ArcGIS.Test.User do
     end)
 
     assert {:error, "Unable to generate token."} =
-             ArcGIS.User.generate_token("user", "pass", Fixtures.portal())
+             ArcGIS.User.generate_token(Fixtures.portal(), "user", "pass")
   end
 end
