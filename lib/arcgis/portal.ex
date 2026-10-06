@@ -148,13 +148,17 @@ defmodule ArcGIS.Portal do
   end
 
   @spec get(t(), resource :: String.t(), [get_options]) ::
-          {:ok, ArcGIS.Portal.ResultSet.t()} | {:ok, map()} | {:error, reason :: String.t()}
+          {:ok, ArcGIS.Portal.ResultSet.t() | map() | term()} | {:error, reason :: String.t()}
   @doc """
   Performs an HTTP GET request, checking for errors.
 
   If the results are paged, then an `%ArcGIS.Portal.ResultSet{}` with the next offset and results is returned.
 
   Queries that result in a single, unpaged response are returned as a map.
+
+  Passing in a transform function with the `transform` option allows processing the returned data into a
+  preferred shape (e.g. a struct) when the query is successful. In the case of responses with multiple results,
+  the transform function will be applied to each result.
   """
   def get(portal, resource, options \\ []) do
     request = build_request(portal, resource, options)
@@ -180,13 +184,17 @@ defmodule ArcGIS.Portal do
   end
 
   @spec post(t(), resource :: String.t(), form_data, [post_options]) ::
-          {:ok, Portal.ResultSet.t()} | {:ok, map()} | {:error, reason :: String.t()}
+          {:ok, Portal.ResultSet.t() | map() | term()} | {:error, reason :: String.t()}
   @doc """
   Performs an HTTP POST request, checking for errors.
 
   If the results are paged, then an `%ArcGIS.Portal.ResultSet{}` with the next offset and results is returned.
 
   Queries that result in a single, unpaged response are returned as a map.
+
+  Passing in a transform function with the `transform` option allows processing the returned data into a
+  preferred shape (e.g. a struct) when the query is successful. In the case of responses with multiple results,
+  the transform function will be applied to each result.
   """
   def post(portal, resource, form_data, options \\ []) do
     request = build_request(portal, resource, options)
