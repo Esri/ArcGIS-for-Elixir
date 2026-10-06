@@ -65,7 +65,7 @@ defmodule ArcGIS.MixProject do
     [
       description: "Esri ArcGIS web services",
       maintainers: ["Aaron Seigo <aseigo@esri.com>", "Niklas Hofmann <nhofmann@esri.com>"],
-      licenses: ["MIT"],
+      licenses: ["Apache 2.0"],
       links: %{
         "Changelog" => "https://hexdocs.pm/arcgis/changelog.html",
         "GitHub" => @source_url
