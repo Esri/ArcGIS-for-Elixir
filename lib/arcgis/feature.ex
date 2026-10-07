@@ -18,6 +18,7 @@ defmodule ArcGIS.Feature do
   """
 
   alias ArcGIS.Feature.Service
+  alias ArcGIS.Portal
   alias ArcGIS.Telemetry
 
   # TODO: define geometry properly
@@ -28,8 +29,8 @@ defmodule ArcGIS.Feature do
   @type features_by_global_id :: [String.t()]
   @type mutations :: %{
           optional(:create) => [t()],
-          optional(:update) => [t()],
-          optional(:delete) => [features_by_id] | [features_by_global_id]
+          optional(:updates) => [t()],
+          optional(:delete) => features_by_id | features_by_global_id
         }
   @type mutations_by_layer_id :: %{non_neg_integer => mutations}
 
@@ -38,6 +39,7 @@ defmodule ArcGIS.Feature do
           {:rollback_on_failure, boolean}
           | {:upload_format, upload_format}
           | {:use_global_ids, boolean}
+  @type mutate_options :: [Portal.request_option() | mutate_option()]
 
   @spec from_map(source :: map, metadata :: map) :: t()
   @doc "Create a new feature struct from a map of data, such as returned by ArcGIS"
@@ -55,8 +57,8 @@ defmodule ArcGIS.Feature do
 
   def from_map(data, _metadata), do: data
 
-  @spec query(Service.t(), layer_id :: non_neg_integer(), [ArGIS.Portal.request_option()]) ::
-          Portal.ResultSet.t()
+  @spec query(Service.t(), layer_id :: non_neg_integer(), Portal.request_options()) ::
+          {:ok, Portal.ResultSet.t()} | {:error, term()}
   @doc "Query features in a Feature Service layer or table"
   def query(%Service{} = feature_service, layer_id, options \\ [])
       when is_number(layer_id) and layer_id >= 0 do
@@ -72,8 +74,8 @@ defmodule ArcGIS.Feature do
   @spec mutate(
           Service.t(),
           mutations :: mutations_by_layer_id,
-          options :: [Portal.request_option() | mutate_option]
-        ) :: boolean
+          options :: mutate_options()
+        ) :: {:ok, Portal.ResultSet.t()} | {:ok, term()} | {:error, reason :: String.t()}
   @doc "Add, update, and/or delete features from one or more layers. Defaults to rolling back on failure."
   def mutate(service, mutations, options \\ []) do
     service = Service.with_schema(service, options)

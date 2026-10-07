@@ -49,6 +49,7 @@ defmodule ArcGIS.Portal do
           | {:headers, url_meta}
           | {:params, url_meta}
           | {:portal, t()}
+  @type portal_options :: [portal_option()]
 
   @type aggregate_type :: :avg | :count | :max | :min | :sum
   @type aggregate :: %{type: aggregate_type, field: String.t(), name: String.t()}
@@ -65,6 +66,7 @@ defmodule ArcGIS.Portal do
           | {:response_format, response_format}
           | {:where, String.t()}
   @type request_option :: portal_option | query_option
+  @type request_options :: [request_option()]
   @type request_data :: [url: String.t(), params: url_meta, headers: url_meta]
 
   @typedoc "A function that transforms raw ArcGIS results into a more prefereable form. Both one- and two-arity functions are supported, with the two arity receiving a map of metadata including such things as the spatial reference if available."
