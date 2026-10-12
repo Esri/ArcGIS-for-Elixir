@@ -35,7 +35,7 @@ defmodule ArcGIS.Feature.Service do
   @type t() :: %__MODULE__{
           portal: Portal.t(),
           id: String.t(),
-          schema: nil | ArcGIS.Schema.t()
+          schema: nil | ArcGIS.Feature.Schema.t()
         }
 
   @spec create(Portal.t(), CreateParameters.t(), options :: Portal.portal_options()) ::
@@ -83,7 +83,7 @@ defmodule ArcGIS.Feature.Service do
     end
   end
 
-  @spec get(t(), resource :: String.t(), options :: Portal.portal_options()) ::
+  @spec get(t(), resource :: String.t(), options :: Portal.request_options()) ::
           {:ok, map} | {:error, reason :: String.t()}
   @doc """
   Sends a GET request to a feature service.
@@ -99,8 +99,13 @@ defmodule ArcGIS.Feature.Service do
     end
   end
 
-  @spec post(t(), resource :: String.t(), form_data :: map, options :: Portal.portal_options()) ::
-          {:ok, map} | {:error, reason :: String.t()}
+  @spec post(
+          t(),
+          resource :: String.t(),
+          form_data :: map() | keyword(),
+          options :: Portal.request_options()
+        ) ::
+          {:ok, Portal.ResultSet.t()} | {:ok, term()} | {:error, reason :: String.t()}
   @doc """
   Sends a POST request to a feature service.
 
@@ -134,7 +139,7 @@ defmodule ArcGIS.Feature.Service do
   Fetches the schema for a feature servcie and on success assigned it to the
   `schema` field of the `Service.t()`
   """
-  @spec with_schema(t(), options :: Portal.portal_options()) :: t()
+  @spec with_schema(t(), options :: Portal.request_options()) :: t()
   def with_schema(service, options \\ [])
 
   def with_schema(%__MODULE__{schema: nil} = service, options) do
@@ -146,7 +151,7 @@ defmodule ArcGIS.Feature.Service do
 
   def with_schema(service, _options), do: service
 
-  @spec fetch_and_cache_url(t(), options :: Portal.portal_options()) ::
+  @spec fetch_and_cache_url(t(), options :: Portal.request_options()) ::
           {:ok, String.t()} | {:error, term}
   defp fetch_and_cache_url(service, options) do
     options = [
