@@ -163,7 +163,7 @@ defmodule ArcGIS.Portal do
   the transform function will be applied to each result.
   """
   def get(portal, resource, options \\ []) do
-    request = build_request(portal, resource, options)
+    request = build_request(portal, resource, %{}, options)
 
     telemetry =
       options
@@ -199,7 +199,8 @@ defmodule ArcGIS.Portal do
   the transform function will be applied to each result.
   """
   def post(portal, resource, form_data, options \\ []) do
-    request = build_request(portal, resource, options)
+    request =
+      build_request(portal, resource, form_data, options)
 
     telemetry =
       options
@@ -316,13 +317,17 @@ defmodule ArcGIS.Portal do
   Macros.geometry_module_for("esriGeometryPolygon", "Geometry.Polygon")
   Macros.geometry_module_for("esriGeometryPolyline", "Geometry.MultiLineString")
 
-  @spec build_request(portal :: t(), relative_path :: String.t(), [request_option]) ::
-          request_data
+  @spec build_request(
+          portal :: t(),
+          relative_path :: String.t(),
+          form_data :: map(),
+          request_options
+        ) :: request_data
   # Returns the url, parameters, and headers for an HTTP request given a path to an endpoint relative to the
   # Portal's default URL and additional options such as authentication information.
   #
   # By default, results are requested in JSON format.
-  defp build_request(%__MODULE__{} = portal, relative_path, options) do
+  defp build_request(%__MODULE__{} = portal, relative_path, form_data, options) do
     url =
       relative_path
       |> URI.parse()
@@ -330,10 +335,30 @@ defmodule ArcGIS.Portal do
       |> to_string()
 
     params =
-      query_parameters(options, Keyword.get(options, :is_features_query?, false))
+      query_parameters(options, form_data, Keyword.get(options, :is_features_query?, false))
       |> Map.put(:clientId, client_id(options))
       |> Map.put(:f, response_format(options))
       |> Map.merge(Keyword.get(options, :params, %{}))
+
+    field_puns = [
+      {:geometry, :returnGeometry},
+      {:limit, :resultRecordCount},
+      {:offset, :resultOffset},
+      {:fields, :outFields},
+      {:aggregates, :outStatistics}
+    ]
+
+    Enum.reduce(field_puns, form_data, fn {name, pun}, form_data ->
+      value = Map.get(form_data, name)
+
+      if value != nil and Map.get(form_data, pun) == nil do
+        form_data
+        |> Map.put(pun, value)
+        |> Map.delete(name)
+      else
+        form_data
+      end
+    end)
 
     headers =
       %{}
@@ -369,39 +394,65 @@ defmodule ArcGIS.Portal do
 
   defp create_sharing_api_url(url, _portal), do: url
 
-  @spec query_parameters(options :: [query_option], is_features_query? :: boolean) :: map
-  defp query_parameters(_options, false), do: %{}
+  @spec query_parameters(
+          options :: [query_option],
+          form_data :: list | map,
+          is_features_query? :: boolean
+        ) :: map
+  defp query_parameters(_options, _form_data, false), do: %{}
 
-  defp query_parameters(options, true) do
+  defp query_parameters(options, form_data, true) do
     %{
-      where:
-        options
-        |> Keyword.get(:where)
-        |> where(),
-      outFields:
-        options
-        |> Keyword.get(:fields)
-        |> out_fields(),
-      returnGeometry: Keyword.get(options, :geometry?, false),
-      resultRecordCount: Keyword.get(options, :limit) |> Utils.to_integer(10),
-      resultOffset: Keyword.get(options, :offset) |> Utils.to_integer(0)
+      returnGeometry: param(options, :geometry?, form_data, :returnGeometry, false),
+      resultRecordCount:
+        param(options, :limit, form_data, :resultRecordCount, fn v -> Utils.to_integer(v, 10) end),
+      resultOffset: param(options, :offset, form_data, :resultOffset, &Utils.to_integer/1)
     }
-    |> add_order_by(Keyword.get(options, :order_by))
-    |> add_aggregates(Keyword.get(options, :aggregates))
+    |> add_param(options, :where, form_data, :where, &where/1)
+    |> add_param(options, :fields, form_data, :outFields, &out_fields/1)
+    |> add_param(options, :order_by, form_data, :orderByFields, &order_by_field/1)
+    |> add_aggregates(param(options, :aggregates, form_data, :outStatistics, nil))
   end
 
-  defp add_order_by(args, nil), do: args
-  defp add_order_by(args, []), do: args
-
-  defp add_order_by(args, order_by_arg) do
-    order_by =
-      order_by_arg
-      |> List.wrap()
-      |> Enum.map(&to_order_by_field/1)
-      |> Enum.join(", ")
-
-    Map.put(args, :orderByFields, order_by)
+  # This function takes the args map that will be pass into the request, along with the
+  # caller-supplied options keywords and the field in the options to be consulted, the 
+  # caller-supplied form_data map and the field that is used in the form fieldsm
+  # and finally a function or a literal value that processes values from the options
+  # array (but only if the options are used). Values in the form_data override values
+  # in the options.
+  defp add_param(args, options, options_field, form_data, form_field, post_fn_or_default) do
+    case param(options, options_field, form_data, form_field, post_fn_or_default) do
+      nil -> args
+      [] -> args
+      "" -> args
+      value -> Map.put(args, form_field, value)
+    end
   end
+
+  defp param(options, options_field, form_data, form_field, post_fn_or_default) do
+    if Access.get(form_data, form_field) == nil do
+      param_from_options(options, options_field, post_fn_or_default)
+    else
+      nil
+    end
+  end
+
+  defp param_from_options(options, field, post_fn) when is_function(post_fn, 1) do
+    post_fn.(Keyword.get(options, field))
+  end
+
+  defp param_from_options(options, field, default) do
+    Keyword.get(options, field, default)
+  end
+
+  defp order_by_field(order_by) when not is_nil(order_by) and order_by != [] do
+    order_by
+    |> List.wrap()
+    |> Enum.map(&to_order_by_field/1)
+    |> Enum.join(", ")
+  end
+
+  defp order_by_field(_order_by), do: nil
 
   defp to_order_by_field({field_name, :asc}), do: "#{field_name} ASC"
   defp to_order_by_field({field_name, :desc}), do: "#{field_name} DESC"

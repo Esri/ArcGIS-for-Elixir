@@ -67,7 +67,9 @@ defmodule ArcGIS.Feature do
       |> Keyword.put(:transform, &__MODULE__.from_map/2)
       |> Keyword.put(:is_features_query?, true)
 
-    Service.post(feature_service, "/#{layer_id}/query", [], options)
+    form_data = %{}
+
+    Service.post(feature_service, "/#{layer_id}/query", form_data, options)
     |> normalize_results(feature_service, layer_id, options)
   end
 
@@ -80,7 +82,7 @@ defmodule ArcGIS.Feature do
   def mutate(service, mutations, options \\ []) do
     service = Service.with_schema(service, options)
 
-    document =
+    edits =
       Enum.map(
         mutations,
         fn {layer_id, edits} ->
@@ -108,8 +110,7 @@ defmodule ArcGIS.Feature do
       |> Keyword.put(:is_features_query?, true)
 
     # TODO: support PBF formats
-    document = [edits: document]
-
+    document = %{edits: edits}
     Service.post(service, "/applyEdits", document, options_with_params)
   end
 

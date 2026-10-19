@@ -102,7 +102,7 @@ defmodule ArcGIS.Feature.Service do
   @spec post(
           t(),
           resource :: String.t(),
-          form_data :: map() | keyword(),
+          form_data :: Portal.form_data(),
           options :: Portal.request_options()
         ) ::
           {:ok, Portal.ResultSet.t()} | {:ok, term()} | {:error, reason :: String.t()}
@@ -111,7 +111,11 @@ defmodule ArcGIS.Feature.Service do
 
   The resource is path fragment for the rquest (e.g. `/applyEdits`).
 
-  Authentication tokens, etc. can be passed in via the options parameter.
+  `form_data` is a map of content to be sent in the body of the post. If 
+
+  Authentication tokens and URL parameters can be passed in via the options parameter.
+  Any URL parameters in `options` that are _also_ in`form_data` are overriden by the
+  value in `form_data`.
   """
   def post(%__MODULE__{} = service, resource, form_data, options \\ []) do
     case resource_url(service, resource, options) do
