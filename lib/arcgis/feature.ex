@@ -114,6 +114,25 @@ defmodule ArcGIS.Feature do
     Service.post(service, "/applyEdits", document, options_with_params)
   end
 
+  @doc "Deletes features from a layer using a where clause"
+  @spec delete(
+          Service.t(),
+          layer_id :: non_neg_integer(),
+          where_clause :: String.t(),
+          options :: Portal.request_options()
+        ) :: {:ok, Portal.ResultSet.t()} | {:ok, term()} | {:error, reason :: String.t()}
+  def delete(service, layer_id, where_clause, options \\ []) do
+    options_with_params =
+      options
+      |> Keyword.put(:telemetry, %Telemetry{
+        metadata: %{service: service, action: :delete_features}
+      })
+      |> Keyword.put(:is_features_query?, true)
+
+    document = %{where: where_clause, returnDeleteResults: false}
+    Service.post(service, "/#{layer_id}/deleteFeatures", document, options_with_params)
+  end
+
   @spec sanitize(features :: [t()], layer_id :: non_neg_integer, service :: Service.t()) :: [t()]
   @doc "Conforms a list of features to ArcGIS requirements, making them appropriate for e.g. use in mutations"
   def sanitize(features, _layer_id, %Service{schema: nil}) do
