@@ -73,9 +73,18 @@ defmodule ArcGIS.Telemetry do
   end
 
   defp extract_error({:ok, %Req.Response{body: %{"error" => error}}}) do
+    message = Map.get(error, "message")
+
+    {message, details} =
+      if message == nil or message == "" do
+        {Map.get(error, "details"), ""}
+      else
+        {message, Map.get(error, "details")}
+      end
+
     %{
-      message: error["message"],
-      details: Map.get(error, "details"),
+      message: message,
+      details: details,
       status_code: Map.get(error, "code")
     }
   end
