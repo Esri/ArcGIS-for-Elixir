@@ -6,18 +6,24 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## v1.0.0
 
+* BREAKING CHANGES (and how to migrate from earlier versions)
+  * The `selector` option was removed from `Portal.post` and `Portal.get`. This was seldom used, and 
+    only made the code more complex and brittle. To migrate uses of `selector`, pattern match on the return value 
+    from `Portal.get` or `Portal.put` to get the same effect.
+  * `form_data` passed to `ArcGIS.Feature.Service.post/4` and `ArcGIS.Portal.post/4` must now be a map.
+    Previously, keyword lists were also accepted, but this was rarely used and only complicated the code base.
+    To migrate, simply move from a keyword list to a map for any `form_data`.
+  * Entries in `form_data` override duplicate entries in `options`. This prevents behaviour such as a default `1=1`
+    where clause from overriding a where clause passed in as form data.
+  * `ArcGIS.User.generate_token` accepts `%ArcGIS.Portal{}` as the first parameter, rather than the third.
+    This matches the rest of the library where the portal struct is always the first parameter.
 * Improvements
+  * Added `ArcGIS.Feature.delete/4`, providing bulk delete with a where clause.
   * Increased API consistency (e.g. `%ArcGIS.Portal` is always the first parameter in a function)
-  * Simplified `Portal.post` and `Portal.get` by removing the `selector` option.
+  * Some ArcGIS errors have a description, but no message. In those cases, the description is now
+    used as the message.
 * Janitorial
-  * Updated some of the typespecs for accuracy
-
-Breaking changes in this version (and how to migrate from earlier versions):
-
-* `ArcGIS.User.generate_token` accepts `%ArcGIS.Portal{}` as the first parameter, rather than the third.
-  This matches the rest of the library where the portal struct is always the first parameter.
-* `selector` is no longer an option for get or put operations. Pattern match on the return value from
-  `Portal.get` or `Portal.put` to get the same effect.
+  * Updated typespecs for accuracy
 
 ## v0.2.1
 
