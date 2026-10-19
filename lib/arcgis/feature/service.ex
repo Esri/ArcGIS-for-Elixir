@@ -84,7 +84,7 @@ defmodule ArcGIS.Feature.Service do
   end
 
   @spec get(t(), resource :: String.t(), options :: Portal.request_options()) ::
-          {:ok, map} | {:error, reason :: String.t()}
+          {:ok, Portal.ResultSet.t()} | {:ok, term()} | {:error, reason :: String.t()}
   @doc """
   Sends a GET request to a feature service.
 
@@ -111,7 +111,7 @@ defmodule ArcGIS.Feature.Service do
 
   The resource is path fragment for the rquest (e.g. `/applyEdits`).
 
-  `form_data` is a map of content to be sent in the body of the post. If 
+  `form_data` is a map of content to be sent in the body of the post. If
 
   Authentication tokens and URL parameters can be passed in via the options parameter.
   Any URL parameters in `options` that are _also_ in`form_data` are overriden by the
