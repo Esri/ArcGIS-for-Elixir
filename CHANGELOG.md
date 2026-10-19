@@ -12,9 +12,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 * Janitorial
   * Updated some of the typespecs for accuracy
 
-Breaking changes in this version:
+Breaking changes in this version (and how to migrate from earlier versions):
 
-* `ArcGIS.User.generate_token` now takes a portal as the first parameter, rather than the third
+* `ArcGIS.User.generate_token` accepts `%ArcGIS.Portal{}` as the first parameter, rather than the third.
+  This matches the rest of the library where the portal struct is always the first parameter.
 * `selector` is no longer an option for get or put operations. Pattern match on the return value from
   `Portal.get` or `Portal.put` to get the same effect.
 
