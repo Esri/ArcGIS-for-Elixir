@@ -101,9 +101,9 @@ defmodule ArcGIS.User do
   end
 
   @spec generate_token(
+          Portal.t(),
           username :: String.t(),
           password :: String.t(),
-          Portal.t(),
           options :: [Portal.request_option() | {:referer, String.t()}]
         ) ::
           String.t() | nil
@@ -111,7 +111,7 @@ defmodule ArcGIS.User do
   Generates a token for a given user on a portal. If to be used with a web frontend,
   pass in `referer` value via the `options` parameter.
   """
-  def generate_token(username, password, %Portal{} = portal, options \\ []) do
+  def generate_token(%Portal{} = portal, username, password, options \\ []) do
     resource = "/generateToken"
 
     form_data =
@@ -122,11 +122,10 @@ defmodule ArcGIS.User do
         referer: referer(portal, options)
       }
 
-    options = [selector: ["token"]]
-
-    case Portal.post(portal, resource, form_data, options) do
-      {:ok, token} -> {:ok, token}
-      error -> error
+    case Portal.post(portal, resource, form_data) do
+      {:ok, %{"token" => token}} -> {:ok, token}
+      {:error, _error} = error -> error
+      _ -> {:error, "Unable to generate token"}
     end
   end
 

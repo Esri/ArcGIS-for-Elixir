@@ -74,9 +74,8 @@ defmodule ArcGIS.Portal do
           (source :: map -> transformed :: term)
           | (source :: map, metadata :: map -> transformed :: term)
 
-  @type get_options :: {:selector, [term()]} | {:transform, transform_fn} | {:verify_tls, boolean}
-  @type post_options ::
-          {:selector, [term()]} | {:transform, transform_fn} | {:verify_tls, boolean}
+  @type get_options :: {:transform, transform_fn} | {:verify_tls, boolean}
+  @type post_options :: {:transform, transform_fn} | {:verify_tls, boolean}
   @type form_data :: map
 
   @arcgis_online_baseurl URI.new!("https://arcgis.com/")
@@ -151,16 +150,17 @@ defmodule ArcGIS.Portal do
   end
 
   @spec get(t(), resource :: String.t(), [get_options]) ::
-          {:ok, Portal.ResultSet.t()} | {:ok, term} | {:error, reason :: String.t()}
+          {:ok, ArcGIS.Portal.ResultSet.t() | map() | term()} | {:error, reason :: String.t()}
   @doc """
   Performs an HTTP GET request, checking for errors.
 
-  An optional `selector: [...]` may be passed in as an option to return
-  only part of the response. For example, `selector: ["geometry", "srid"]`
-  would return the `srid` in the `geometry` object if it exists, or an
-  error tuple otherwise.
+  If the results are paged, then an `%ArcGIS.Portal.ResultSet{}` with the next offset and results is returned.
 
-  If the results are paged, then a map with the next offset and results is returned.
+  Queries that result in a single, unpaged response are returned as a map.
+
+  Passing in a transform function with the `transform` option allows processing the returned data into a
+  preferred shape (e.g. a struct) when the query is successful. In the case of responses with multiple results,
+  the transform function will be applied to each result.
   """
   def get(portal, resource, options \\ []) do
     request = build_request(portal, resource, options)
@@ -179,21 +179,24 @@ defmodule ArcGIS.Portal do
     with {:ok, %{body: body}} = response <- Req.get(request, get_args),
          :noerror <- ArcGIS.check_for_error(response) do
       Telemetry.handle_success(telemetry)
-      select(body, options)
+      {:ok, handle_paged_body(body, options)}
     else
       error -> Telemetry.handle_error(error, telemetry)
     end
   end
 
   @spec post(t(), resource :: String.t(), form_data, [post_options]) ::
-          {:ok, Portal.ResultSet.t()} | {:ok, term} | {:error, reason :: String.t()}
+          {:ok, Portal.ResultSet.t() | map() | term()} | {:error, reason :: String.t()}
   @doc """
   Performs an HTTP POST request, checking for errors.
 
-  An optional `selector: [...]` may be passed in as an option to return
-  only part of the response. For example, `selector: ["geometry", "srid"]`
-  would return the `srid` in the `geometry` object if it exists, or an
-  error tuple otherwise.
+  If the results are paged, then an `%ArcGIS.Portal.ResultSet{}` with the next offset and results is returned.
+
+  Queries that result in a single, unpaged response are returned as a map.
+
+  Passing in a transform function with the `transform` option allows processing the returned data into a
+  preferred shape (e.g. a struct) when the query is successful. In the case of responses with multiple results,
+  the transform function will be applied to each result.
   """
   def post(portal, resource, form_data, options \\ []) do
     request = build_request(portal, resource, options)
@@ -214,7 +217,7 @@ defmodule ArcGIS.Portal do
     with {:ok, %{body: body}} = response <- Req.post(request, post_args),
          :noerror <- ArcGIS.check_for_error(response) do
       Telemetry.handle_success(telemetry)
-      select(body, options)
+      {:ok, handle_paged_body(body, options)}
     else
       error -> Telemetry.handle_error(error, telemetry)
     end
@@ -241,19 +244,6 @@ defmodule ArcGIS.Portal do
     Keyword.update(base, :transport_opts, merged_transport_opts, fn existing ->
       Keyword.merge(existing, merged_transport_opts)
     end)
-  end
-
-  defp select(body, options) do
-    case Keyword.get(options, :selector, []) do
-      selector when selector != [] ->
-        case Kernel.get_in(body, selector) do
-          nil -> {:error, "Not found: #{inspect(selector)}"}
-          data -> {:ok, transform_results(data, options)}
-        end
-
-      _ ->
-        {:ok, handle_paged_body(body, options)}
-    end
   end
 
   defp transform_results(results, options, metadata \\ %{}) do
