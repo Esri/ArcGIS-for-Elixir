@@ -7,8 +7,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ## v1.0.0
 
 * BREAKING CHANGES (and how to migrate from earlier versions)
-  * The `selector` option was removed from `Portal.post` and `Portal.get`. This was seldom used, and 
-    only made the code more complex and brittle. To migrate uses of `selector`, pattern match on the return value 
+  * The `selector` option was removed from `Portal.post` and `Portal.get`. This was seldom used, and
+    only made the code more complex and brittle. To migrate uses of `selector`, pattern match on the return value
     from `Portal.get` or `Portal.put` to get the same effect.
   * `form_data` passed to `ArcGIS.Feature.Service.post/4` and `ArcGIS.Portal.post/4` must now be a map.
     Previously, keyword lists were also accepted, but this was rarely used and only complicated the code base.
@@ -18,6 +18,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   * `ArcGIS.User.generate_token` accepts `%ArcGIS.Portal{}` as the first parameter, rather than the third.
     This matches the rest of the library where the portal struct is always the first parameter.
 * Improvements
+  * Added `ArcGIS.AsyncJob`, a utility module and structure for representing and interacting with asyncronous jobs on the platform.
+  * Added `ArcGIS.Feature.MutationResult`, a utility module for processing the return values of mutations.
   * Added `ArcGIS.Feature.delete/4`, providing bulk delete with a where clause.
   * Increased API consistency (e.g. `%ArcGIS.Portal` is always the first parameter in a function)
   * Some ArcGIS errors have a description, but no message. In those cases, the description is now
