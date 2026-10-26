@@ -43,38 +43,163 @@ defmodule ArcGIS.Feature.MutationResult do
 
   ## Examples
 
-      iex> ArcGIS.Feature.MutationResult.validate({:ok, [%{"addResults" => [%{"success" => true}]}]})
-      {:ok, [%{"addResults" => [%{"success" => true}]}]}
+      iex> ArcGIS.Feature.MutationResult.validate({:ok, %{"addResults" => [%{"success" => true}]}})
+      {:ok, %{adds: %{failures: [], failures?: false, successes: [%{"success" => true}]}, failures?: false}}
 
       iex> ArcGIS.Feature.MutationResult.validate({:ok, %{"deleteResults" => [%{"success" => false, "objectId" => 1}]}})
-      {:error, {:mutation_failed, %{"deleteResults" => [%{"success" => false, "objectId" => 1}]}}}
+      {:error, %{deletes: %{failures: [%{"objectId" => 1, "success" => false}], failures?: true, successes: []}, failures?: true}}
   """
   @spec validate({:ok, results} | {:error, reason}) ::
           {:ok, results}
           | {:error, {:mutation_failed, results} | {:unexpected_mutation_result, term()} | reason}
         when results: term(), reason: term()
   def validate({:error, _reason} = error), do: error
+  def validate({:ok, %{"error" => error}}), do: {:error, error}
+  def validate({:ok, %{"success" => false}}), do: {:error, "Unknown errror"}
 
   def validate({:ok, results}) do
-    case failure_reason(results) do
-      nil -> {:ok, results}
-      :mutation_failed -> {:error, {:mutation_failed, results}}
-      reason -> {:error, reason}
+    if ArcGIS.AsyncJob.valid_response?(results) do
+      {:ok, ArcGIS.AsyncJob.from_response(results)}
+    else
+      validate_results(results)
     end
   end
 
-  defp failure_reason(results) when is_list(results),
-    do: Enum.find_value(results, &failure_reason/1)
+  def validate(_), do: {:error, "Unexpected mutation result"}
 
-  defp failure_reason(%{"error" => _}), do: :mutation_failed
-  defp failure_reason(%{"success" => false}), do: :mutation_failed
+  @doc """
+  Given a validated mutation result, this function traverses the validation and
+  returns only the failed mutations.
+  """
+  def extract_errors(%{failures: false}), do: %{layers: %{}}
 
-  defp failure_reason(result) when is_map(result) do
-    Enum.find_value(
-      ["addResults", "updateResults", "deleteResults", "attachments", "assetMaps"],
-      fn key -> failure_reason(Map.get(result, key, [])) end
+  def extract_errors(%{layers: layers}) do
+    %{
+      layers:
+        Enum.reduce(layers, %{}, fn layer, acc ->
+          result =
+            Enum.reduce(layer, %{}, fn
+              {_mutation, %{failures?: false}}, acc -> acc
+              # TODO
+              {mutation, %{failures: failures}}, acc -> Map.put(acc, mutation, failures)
+            end)
+
+          if Enum.empty?(result) do
+            acc
+          else
+            Map.put(acc, layer, result)
+          end
+        end)
+    }
+  end
+
+  defp validate_results(results) do
+    case check_results(results) do
+      %{failures?: false} = checked -> {:ok, checked}
+      checked -> {:error, checked}
+    end
+  end
+
+  defp check_results(results) when is_list(results) do
+    case results do
+      [] ->
+        %{successes: [], failures?: false, failures: []}
+
+      [%{} | _] ->
+        Enum.reduce(results, %{failures?: false, layers: %{}}, &check_layer_features/2)
+
+      features when is_list(features) ->
+        check_features(features)
+
+      _ ->
+        %{failures?: false, layers: {}}
+    end
+  end
+
+  defp check_results(result) when is_map(result) do
+    checked = check_mutation_map(result)
+
+    Enum.reduce(
+      [{"attachments", :attachments}, {"assetMaps", :asset_maps}],
+      checked,
+      fn {mutation_type, result_key}, acc ->
+        case check_mutation_map(Map.get(result, mutation_type, [])) do
+          nil ->
+            acc
+
+          checked ->
+            acc
+            |> Map.put(result_key, checked)
+            |> Map.put(:failures?, acc.failures? or checked.failures?)
+        end
+      end
     )
   end
 
-  defp failure_reason(result), do: {:unexpected_mutation_result, result}
+  defp check_results(_result), do: %{failures?: true}
+
+  defp check_mutation_map(result) when is_map(result) do
+    Enum.reduce(
+      [
+        {"addResults", :adds},
+        {"updateResults", :updates},
+        {"deleteResults", :deletes}
+      ],
+      %{failures?: false},
+      fn {mutation_type, result_key}, acc ->
+        Map.get(result, mutation_type, [])
+        |> check_one_result_set(result_key, acc)
+      end
+    )
+  end
+
+  defp check_mutation_map(_), do: nil
+
+  defp check_features([]), do: %{successes: [], failures?: false, failures: []}
+
+  defp check_features(features) when is_list(features) do
+    checked =
+      Enum.reduce(
+        features,
+        %{successes: [], failures: []},
+        &check_feature/2
+      )
+
+    Map.put(checked, :failures?, not Enum.empty?(checked.failures))
+  end
+
+  defp check_features(_), do: %{successes: [], failures?: false, failures: []}
+
+  defp check_one_result_set([], _result_key, acc), do: acc
+
+  defp check_one_result_set(features, result_key, acc) do
+    checked = check_features(features)
+
+    acc
+    |> Map.put(result_key, checked)
+    |> Map.put(:failures?, acc.failures? or checked.failures?)
+  end
+
+  defp check_layer_features(%{"id" => layer_id} = layer_results, acc) do
+    results = check_results(layer_results)
+
+    acc
+    |> Map.put(:layers, Map.put(acc.layers, layer_id, results))
+    |> Map.put(:failures?, acc.failures? or results.failures?)
+  end
+
+  defp check_feature(feature, acc) when is_map(feature) do
+    case feature do
+      %{"error" => _} ->
+        Map.update!(acc, :failures, fn failures -> [feature | failures] end)
+
+      %{"success" => false} ->
+        Map.update!(acc, :failures, fn failures -> [feature | failures] end)
+
+      _ ->
+        Map.update!(acc, :successes, fn successes -> [feature | successes] end)
+    end
+  end
+
+  defp check_feature(_, acc), do: acc
 end

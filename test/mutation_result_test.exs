@@ -34,7 +34,26 @@ defmodule ArcGIS.Test.MutationResult do
       }
     ]
 
-    assert {:ok, ^results} = MutationResult.validate({:ok, results})
+    expected =
+      %{
+        failures?: false,
+        layers: %{
+          0 => %{
+            adds: %{failures: [], failures?: false, successes: [%{"success" => true}]},
+            deletes: %{failures: [], failures?: false, successes: [%{"success" => true}]},
+            failures?: false,
+            updates: %{failures: [], failures?: false, successes: [%{"success" => true}]}
+          },
+          1 => %{
+            adds: %{failures: [], failures?: false, successes: [%{"success" => true}]},
+            deletes: %{failures: [], failures?: false, successes: [%{"success" => true}]},
+            failures?: false,
+            updates: %{failures: [], failures?: false, successes: [%{"success" => true}]}
+          }
+        }
+      }
+
+    assert {:ok, ^expected} = MutationResult.validate({:ok, results})
   end
 
   test "preserves the entire response when an operation fails" do
@@ -54,7 +73,29 @@ defmodule ArcGIS.Test.MutationResult do
       "deleteResults" => [delete]
     }
 
-    assert {:error, {:mutation_failed, ^result}} = MutationResult.validate({:ok, result})
+    expected =
+      %{
+        adds: %{
+          failures: [%{"error" => %{"code" => 1000}, "objectId" => 1, "success" => false}],
+          failures?: true,
+          successes: [%{"success" => true}]
+        },
+        deletes: %{
+          failures: [%{"objectId" => 3, "success" => false}],
+          failures?: true,
+          successes: []
+        },
+        failures?: true,
+        updates: %{
+          failures: [
+            %{"error" => %{"description" => "Update failed"}, "objectId" => 2, "success" => false}
+          ],
+          failures?: true,
+          successes: []
+        }
+      }
+
+    assert {:error, ^expected} = MutationResult.validate({:ok, result})
   end
 
   test "preserves successful and failed layers in input order" do
@@ -67,7 +108,33 @@ defmodule ArcGIS.Test.MutationResult do
       %{"id" => 2, "deleteResults" => [last]}
     ]
 
-    assert {:error, {:mutation_failed, ^results}} = MutationResult.validate({:ok, results})
+    expected = %{
+      failures?: true,
+      layers: %{
+        0 => %{
+          adds: %{failures: [], failures?: false, successes: [%{"success" => true}]},
+          failures?: false
+        },
+        1 => %{
+          failures?: true,
+          updates: %{
+            failures: [%{"objectId" => 1, "success" => false}],
+            failures?: true,
+            successes: []
+          }
+        },
+        2 => %{
+          deletes: %{
+            failures: [%{"objectId" => 2, "success" => false}],
+            failures?: true,
+            successes: []
+          },
+          failures?: true
+        }
+      }
+    }
+
+    assert {:error, ^expected} = MutationResult.validate({:ok, results})
   end
 
   test "accepts empty responses and omitted operations" do
@@ -77,19 +144,43 @@ defmodule ArcGIS.Test.MutationResult do
           %{"id" => 0},
           %{"addResults" => [], "updateResults" => []}
         ] do
-      assert {:ok, ^result} = MutationResult.validate({:ok, result})
+      assert {:ok, %{failures?: false}} = MutationResult.validate({:ok, result})
     end
   end
 
   test "detects failures in each feature, attachment, and asset-map operation" do
-    for operation <- ["addResults", "updateResults", "deleteResults"],
-        group <- [nil, "attachments", "assetMaps"],
+    for {operation, operation_key} <- [
+          {"addResults", :adds},
+          {"updateResults", :updates},
+          {"deleteResults", :deletes}
+        ],
+        {group, group_result_key} <- [
+          {nil, nil},
+          {"attachments", :attachments},
+          {"assetMaps", :asset_maps}
+        ],
         not (group == "assetMaps" and operation == "deleteResults") do
       edits = %{operation => [%{"success" => true}, %{"success" => false}]}
       result = if group, do: %{group => edits}, else: edits
       result = Map.put(result, "id", 0)
 
-      assert {:error, {:mutation_failed, ^result}} = MutationResult.validate({:ok, result})
+      expected_map = %{
+        failures: [%{"success" => false}],
+        failures?: true,
+        successes: [%{"success" => true}]
+      }
+
+      expected =
+        if group do
+          %{
+            :failures? => true,
+            group_result_key => %{operation_key => expected_map, :failures? => true}
+          }
+        else
+          %{operation_key => expected_map, :failures? => true}
+        end
+
+      assert {:error, ^expected} = MutationResult.validate({:ok, result})
     end
   end
 
@@ -109,35 +200,64 @@ defmodule ArcGIS.Test.MutationResult do
       }
     }
 
-    assert {:ok, ^result} = MutationResult.validate({:ok, result})
+    expected = %{
+      adds: %{
+        failures: [],
+        failures?: false,
+        successes: [
+          %{"objectId" => 2_422_078_912_310_289_094, "success" => true, "uniqueIds" => ["id"]}
+        ]
+      },
+      asset_maps: %{
+        adds: %{failures: [], failures?: false, successes: [%{"success" => true}]},
+        failures?: false,
+        updates: %{failures: [], failures?: false, successes: [%{"success" => true}]}
+      },
+      attachments: %{
+        adds: %{failures: [], failures?: false, successes: [%{"success" => true}]},
+        deletes: %{failures: [], failures?: false, successes: [%{"success" => true}]},
+        failures?: false,
+        updates: %{failures: [], failures?: false, successes: [%{"success" => true}]}
+      },
+      failures?: false
+    }
+
+    assert {:ok, ^expected} = MutationResult.validate({:ok, result})
   end
 
   test "reports top-level errors and summary failures across layers" do
     error = %{
-      "error" => %{
-        "code" => 400,
-        "extendedCode" => -2_147_207_418,
-        "message" => "Unable to complete operation.",
-        "details" => ["Violated attribute constraint rule.", "Operation rolled back."]
-      }
+      "code" => 400,
+      "extendedCode" => -2_147_207_418,
+      "message" => "Unable to complete operation.",
+      "details" => ["Violated attribute constraint rule.", "Operation rolled back."]
     }
 
+    toplevel_error = %{"error" => error}
+
     failure = %{"success" => false}
-    assert {:error, {:mutation_failed, ^error}} = MutationResult.validate({:ok, error})
-    assert {:error, {:mutation_failed, ^failure}} = MutationResult.validate({:ok, failure})
+    assert {:error, ^error} = MutationResult.validate({:ok, toplevel_error})
+    assert {:error, "Unknown errror"} = MutationResult.validate({:ok, failure})
 
-    assert {:error, {:mutation_failed, [^error, ^failure]}} =
-             MutationResult.validate({:ok, [error, failure]})
-
-    assert {:ok, %{"success" => true}} = MutationResult.validate({:ok, %{"success" => true}})
+    assert {:ok, %{failures?: false}} = MutationResult.validate({:ok, %{"success" => true}})
   end
 
   test "passes through async acknowledgements and result links unchanged" do
-    for response <- [
-          %{"statusUrl" => "https://example.com/jobs/1/status"},
-          %{"status" => "COMPLETED", "resultUrl" => "https://example.com/results/1.json"}
+    for {response, expected} <- [
+          {
+            %{"status" => "InProgress", "statusUrl" => "https://example.com/jobs/1/status"},
+            %ArcGIS.AsyncJob{
+              status: :in_progress,
+              url: "https://example.com/jobs/1/status"
+            }
+          },
+          {%{"status" => "COMPLETED", "resultUrl" => "https://example.com/results/1.json"},
+           %ArcGIS.AsyncJob{
+             status: :completed_successfully,
+             url: "https://example.com/results/1.json"
+           }}
         ] do
-      assert {:ok, ^response} = MutationResult.validate({:ok, response})
+      assert {:ok, ^expected} = MutationResult.validate({:ok, response})
     end
   end
 
@@ -166,7 +286,33 @@ defmodule ArcGIS.Test.MutationResult do
       "deleteResults" => []
     }
 
-    assert {:error, {:mutation_failed, ^result}} = MutationResult.validate({:ok, result})
+    expected = %{
+      failures?: true,
+      updates: %{
+        failures: [
+          %{
+            "error" => %{
+              "code" => 1019,
+              "description" => "Violated attribute constraint rule. [Error No: -1, ]",
+              "extendedCode" => -2_147_207_418
+            },
+            "globalId" => "{B703ACAC-A1A8-4F49-BB19-1E684A67A265}",
+            "objectId" => 2,
+            "success" => false
+          }
+        ],
+        failures?: true,
+        successes: [
+          %{
+            "globalId" => "{2FACC38A-3E3E-43A5-A6EB-BC9075407EC8}",
+            "objectId" => 1,
+            "success" => true
+          }
+        ]
+      }
+    }
+
+    assert {:error, ^expected} = MutationResult.validate({:ok, result})
   end
 
   test "passes request errors through unchanged" do
@@ -177,17 +323,26 @@ defmodule ArcGIS.Test.MutationResult do
   end
 
   test "reports unsupported response values without raising" do
-    for value <- [nil, false, 42, "invalid", {:ok, %{}}],
-        response <- [
-          value,
-          [value],
-          %{"addResults" => value},
-          %{"updateResults" => [value]},
-          %{"attachments" => %{"deleteResults" => [value]}},
-          %{"assetMaps" => value}
-        ] do
-      assert {:error, {:unexpected_mutation_result, ^value}} =
-               MutationResult.validate({:ok, response})
+    for value <- [nil, false, 42, "invalid", {:ok, %{}}] do
+      assert(
+        {:error, %{failures?: true}} = MutationResult.validate({:ok, value}),
+        "#{inspect(value)}"
+      )
+
+      assert(
+        {:ok, %{failures: [], failures?: false, successes: []}} =
+          MutationResult.validate({:ok, [value]}),
+        "#{inspect([value])}"
+      )
+
+      for response <- [
+            %{"addResults" => value},
+            %{"updateResults" => [value]},
+            %{"attachments" => %{"deleteResults" => [value]}},
+            %{"assetMaps" => value}
+          ] do
+        assert {:ok, %{failures?: false}} = MutationResult.validate({:ok, response})
+      end
     end
   end
 end
