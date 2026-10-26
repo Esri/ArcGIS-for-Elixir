@@ -49,6 +49,7 @@ defmodule ArcGIS.Portal do
           | {:headers, url_meta}
           | {:params, url_meta}
           | {:portal, t()}
+          | {:timeout, :infinity | pos_integer()}
   @type portal_options :: [portal_option()]
 
   @type aggregate_type :: :avg | :count | :max | :min | :sum
@@ -173,7 +174,7 @@ defmodule ArcGIS.Portal do
 
     get_args = [
       connect_options: transport_options(portal, options),
-      receive_timeout: ArcGIS.default_query_timeout()
+      request_timeout: Keyword.get(options, :timeout, ArcGIS.default_query_timeout())
     ]
 
     with {:ok, %{body: body}} = response <- Req.get(request, get_args),
@@ -369,17 +370,20 @@ defmodule ArcGIS.Portal do
     |> Keyword.merge(Application.get_env(:arcgis, :req_defaults, []))
   end
 
-  defp add_token_header(headers, nil), do: headers
+  @doc false
+  def add_token_header(headers, nil), do: headers
 
-  defp add_token_header(headers, token) do
+  def add_token_header(headers, token) do
     Map.put(headers, "x-esri-authorization", "Bearer #{token}")
   end
 
-  defp client_id(options) do
+  @doc false
+  def client_id(options) do
     Keyword.get(options, :client_id, ArcGIS.client_id())
   end
 
-  defp response_format(options) do
+  @doc false
+  def response_format(options) do
     Keyword.get(options, :response_format, "json")
   end
 
@@ -415,7 +419,7 @@ defmodule ArcGIS.Portal do
   end
 
   # This function takes the args map that will be pass into the request, along with the
-  # caller-supplied options keywords and the field in the options to be consulted, the 
+  # caller-supplied options keywords and the field in the options to be consulted, the
   # caller-supplied form_data map and the field that is used in the form fieldsm
   # and finally a function or a literal value that processes values from the options
   # array (but only if the options are used). Values in the form_data override values
