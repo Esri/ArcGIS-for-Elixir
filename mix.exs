@@ -82,7 +82,7 @@ defmodule ArcGIS.MixProject do
       formatters: ["html"],
       groups_for_modules: [
         Users: [~r/ArcGIS.User.*/],
-        Portals: [~r/ArcGIS.Portal.*/],
+        Portals: [~r/ArcGIS.Portal.*/, ArcGIS.AsyncJob],
         Features: [~r/ArcGIS.Feature(?!.(Domain|Schema)).*/],
         Schemas: [~r/ArcGIS.Feature.Schema.*/],
         Domains: [~r/ArcGIS.Feature.Domain.*/],
