@@ -50,6 +50,7 @@ defmodule ArcGIS.Portal do
           | {:params, url_meta}
           | {:portal, t()}
           | {:timeout, :infinity | pos_integer()}
+          | {:async, boolean()}
   @type portal_options :: [portal_option()]
 
   @type aggregate_type :: :avg | :count | :max | :min | :sum
@@ -164,7 +165,7 @@ defmodule ArcGIS.Portal do
   the transform function will be applied to each result.
   """
   def get(portal, resource, options \\ []) do
-    request = build_request(portal, resource, %{}, options)
+    {request, _form_data} = build_request(portal, resource, %{}, options)
 
     telemetry =
       options
@@ -180,7 +181,7 @@ defmodule ArcGIS.Portal do
     with {:ok, %{body: body}} = response <- Req.get(request, get_args),
          :noerror <- ArcGIS.check_for_error(response) do
       Telemetry.handle_success(telemetry)
-      {:ok, handle_paged_body(body, options)}
+      {:ok, handle_response_body(body, options)}
     else
       error -> Telemetry.handle_error(error, telemetry)
     end
@@ -200,7 +201,7 @@ defmodule ArcGIS.Portal do
   the transform function will be applied to each result.
   """
   def post(portal, resource, form_data, options \\ []) do
-    request =
+    {request, form_data} =
       build_request(portal, resource, form_data, options)
 
     telemetry =
@@ -219,7 +220,7 @@ defmodule ArcGIS.Portal do
     with {:ok, %{body: body}} = response <- Req.post(request, post_args),
          :noerror <- ArcGIS.check_for_error(response) do
       Telemetry.handle_success(telemetry)
-      {:ok, handle_paged_body(body, options)}
+      {:ok, handle_response_body(body, options)}
     else
       error -> Telemetry.handle_error(error, telemetry)
     end
@@ -269,7 +270,7 @@ defmodule ArcGIS.Portal do
     end
   end
 
-  defp handle_paged_body(
+  defp handle_response_body(
          %{"objectIdFieldName" => _, "features" => results} = page,
          options
        ) do
@@ -298,7 +299,7 @@ defmodule ArcGIS.Portal do
     }
   end
 
-  defp handle_paged_body(
+  defp handle_response_body(
          %{"results" => results, "nextStart" => offset, "start" => start} = page,
          options
        ) do
@@ -310,7 +311,13 @@ defmodule ArcGIS.Portal do
     }
   end
 
-  defp handle_paged_body(body, options), do: transform_results(body, options)
+  defp handle_response_body(body, options) do
+    if ArcGIS.AsyncJob.valid_response?(body) do
+      ArcGIS.AsyncJob.from_response(body)
+    else
+      transform_results(body, options)
+    end
+  end
 
   def geometry_module_for("", _z, _m), do: :unknown
   Macros.geometry_module_for("esriGeometryMultipoint", "Geometry.MultiPoint")
@@ -337,37 +344,49 @@ defmodule ArcGIS.Portal do
 
     params =
       query_parameters(options, form_data, Keyword.get(options, :is_features_query?, false))
+      |> add_async_param(options)
       |> Map.put(:clientId, client_id(options))
       |> Map.put(:f, response_format(options))
       |> Map.merge(Keyword.get(options, :params, %{}))
 
-    field_puns = [
-      {:geometry, :returnGeometry},
-      {:limit, :resultRecordCount},
-      {:offset, :resultOffset},
-      {:fields, :outFields},
-      {:aggregates, :outStatistics}
-    ]
-
-    Enum.reduce(field_puns, form_data, fn {name, pun}, form_data ->
-      value = Map.get(form_data, name)
-
-      if value != nil and Map.get(form_data, pun) == nil do
-        form_data
-        |> Map.put(pun, value)
-        |> Map.delete(name)
-      else
-        form_data
-      end
-    end)
+    form_data = resolve_field_puns(form_data)
 
     headers =
       %{}
       |> add_token_header(Keyword.get(options, :auth_token))
       |> Map.merge(Keyword.get(options, :headers, %{}))
 
-    [url: url, params: params, headers: headers]
-    |> Keyword.merge(Application.get_env(:arcgis, :req_defaults, []))
+    request =
+      [url: url, params: params, headers: headers]
+      |> Keyword.merge(Application.get_env(:arcgis, :req_defaults, []))
+
+    {request, form_data}
+  end
+
+  defp resolve_field_puns(form_data) do
+    if Enum.empty?(form_data) do
+      form_data
+    else
+      field_puns = [
+        {:geometry, :returnGeometry},
+        {:limit, :resultRecordCount},
+        {:offset, :resultOffset},
+        {:fields, :outFields},
+        {:aggregates, :outStatistics}
+      ]
+
+      Enum.reduce(field_puns, form_data, fn {name, pun}, form_data ->
+        value = Map.get(form_data, name)
+
+        if value != nil and Map.get(form_data, pun) == nil do
+          form_data
+          |> Map.put(pun, value)
+          |> Map.delete(name)
+        else
+          form_data
+        end
+      end)
+    end
   end
 
   @doc false
@@ -385,6 +404,13 @@ defmodule ArcGIS.Portal do
   @doc false
   def response_format(options) do
     Keyword.get(options, :response_format, "json")
+  end
+
+  defp add_async_param(params, options) do
+    case Keyword.get(options, :async) do
+      true -> Map.put(params, :async, true)
+      _ -> params
+    end
   end
 
   defp create_sharing_api_url(
