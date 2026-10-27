@@ -13,6 +13,20 @@
 # limitations under the License.
 
 defmodule ArcGIS.AsyncJob do
+  @moduledoc """
+  ArcGIS supports running various requests asyncronously.
+
+  In these cases, the response to a request is a document with a status
+  and a URL. While the job is not completed, the URL updates the status
+  of the job. When it is completed, the URL returns the results (if any).
+
+  Passing `async: true` to requests made through an `ArcGIS.Portal` will
+  attempt to run the request asyncronously, and on success will return an
+  `%ArcGIS.AsyncJob{}` struct.
+
+  To check on a job's status, pass an `%ArcGIS.AsyncJob{}` struct to 
+  `ArcGIS.AyncJob.update/2`.
+  """
   alias ArcGIS.Telemetry
 
   defstruct [:status, :url]
@@ -44,9 +58,13 @@ defmodule ArcGIS.AsyncJob do
   end
 
   @spec update(t(), options :: ArcGIS.Portal.portal_options()) ::
-          {:ok, t()} | {:error, reason :: String.t()}
+          {:ok, t()} | {:ok, t(), map()} | {:error, reason :: String.t()}
   @doc """
-  Takes a job and optional portal options and updates it using the included URL.
+  Attempts to fetch the update URL of the async job passed in,
+  and returns a new `%ArcGIS.AsyncJob{}` struct.
+
+  On job completion, any job result data will be returned as the 
+  third member of the returned tuple.
   """
   def update(%__MODULE__{} = job, options \\ []) do
     request = build_request(job.url, options)
