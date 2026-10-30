@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
- defmodule ArcGIS.Feature.Domain.Enum do
+defmodule ArcGIS.Feature.Domain.Enum do
   @moduledoc """
   An enumerated field. Enumerations are named and have a mapping of enumerated strings to actual values.
   """
