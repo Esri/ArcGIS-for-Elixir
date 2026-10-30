@@ -51,6 +51,7 @@ defmodule ArcGIS.Portal do
           | {:portal, t()}
           | {:timeout, :infinity | pos_integer()}
           | {:async, boolean()}
+          | {:verify_tls, boolean() | nil}
   @type portal_options :: [portal_option()]
 
   @type aggregate_type :: :avg | :count | :max | :min | :sum
@@ -58,7 +59,7 @@ defmodule ArcGIS.Portal do
   @type response_format :: :geojson | :htmnl | :json | :pbf
   @type order_by_field :: :atom | String.t() | {:atom | String.t(), :asc | :desc}
   @type query_option ::
-          {:is_features_query?, :boolean}
+          {:is_features_query?, boolean()}
           | {:aggregates, [aggregate]}
           | {:fields, [String.t()]}
           | {:geometry?, boolean}
@@ -67,7 +68,7 @@ defmodule ArcGIS.Portal do
           | {:order_by, order_by_field() | [order_by_field]}
           | {:response_format, response_format}
           | {:where, String.t()}
-  @type request_option :: portal_option | query_option
+  @type request_option :: portal_option | query_option | {:transform, transform_fn}
   @type request_options :: [request_option()]
   @type request_data :: [url: String.t(), params: url_meta, headers: url_meta]
 
@@ -76,8 +77,8 @@ defmodule ArcGIS.Portal do
           (source :: map -> transformed :: term)
           | (source :: map, metadata :: map -> transformed :: term)
 
-  @type get_options :: {:transform, transform_fn} | {:verify_tls, boolean}
-  @type post_options :: {:transform, transform_fn} | {:verify_tls, boolean}
+  @type get_options :: request_option()
+  @type post_options :: request_option()
   @type form_data :: map
 
   @arcgis_online_baseurl URI.new!("https://arcgis.com/")
@@ -330,7 +331,7 @@ defmodule ArcGIS.Portal do
           relative_path :: String.t(),
           form_data :: map(),
           request_options
-        ) :: request_data
+        ) :: {request_data, form_data}
   # Returns the url, parameters, and headers for an HTTP request given a path to an endpoint relative to the
   # Portal's default URL and additional options such as authentication information.
   #
@@ -425,7 +426,7 @@ defmodule ArcGIS.Portal do
   defp create_sharing_api_url(url, _portal), do: url
 
   @spec query_parameters(
-          options :: [query_option],
+          options :: request_options(),
           form_data :: list | map,
           is_features_query? :: boolean
         ) :: map
