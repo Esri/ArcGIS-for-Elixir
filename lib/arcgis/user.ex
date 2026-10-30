@@ -106,7 +106,7 @@ defmodule ArcGIS.User do
           password :: String.t(),
           options :: [Portal.request_option() | {:referer, String.t()}]
         ) ::
-          String.t() | nil
+          {:ok, String.t()} | {:error, String.t()}
   @doc """
   Generates a token for a given user on a portal. If to be used with a web frontend,
   pass in `referer` value via the `options` parameter.

@@ -124,7 +124,8 @@ defmodule ArcGIS.Feature.Service do
     end
   end
 
-  @spec url(t()) :: String.t()
+  @spec url(t()) :: {:ok, URI.t()} | {:error, term()}
+  @spec url(t(), Portal.request_options()) :: {:ok, URI.t()} | {:error, term()}
   @doc """
   Returns the access URL for a feature service.
   """
@@ -156,7 +157,7 @@ defmodule ArcGIS.Feature.Service do
   def with_schema(service, _options), do: service
 
   @spec fetch_and_cache_url(t(), options :: Portal.request_options()) ::
-          {:ok, String.t()} | {:error, term}
+          {:ok, URI.t()} | {:error, term}
   defp fetch_and_cache_url(service, options) do
     options = [
       auth_token: Keyword.get(options, :auth_token, ""),

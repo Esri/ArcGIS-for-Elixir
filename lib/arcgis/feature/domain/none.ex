@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
- defmodule ArcGIS.Feature.Domain.None do
+defmodule ArcGIS.Feature.Domain.None do
   @moduledoc """
   The default unconstrained domain for fields. Such a field may contain any
   (type-conformant) data.

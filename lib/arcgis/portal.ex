@@ -51,6 +51,7 @@ defmodule ArcGIS.Portal do
           | {:portal, t()}
           | {:timeout, :infinity | pos_integer()}
           | {:async, boolean()}
+          | {:verify_tls, boolean() | nil}
   @type portal_options :: [portal_option()]
 
   @type aggregate_type :: :avg | :count | :max | :min | :sum
@@ -58,7 +59,7 @@ defmodule ArcGIS.Portal do
   @type response_format :: :geojson | :htmnl | :json | :pbf
   @type order_by_field :: :atom | String.t() | {:atom | String.t(), :asc | :desc}
   @type query_option ::
-          {:is_features_query?, :boolean}
+          {:is_features_query?, boolean()}
           | {:aggregates, [aggregate]}
           | {:fields, [String.t()]}
           | {:geometry?, boolean}
@@ -67,7 +68,7 @@ defmodule ArcGIS.Portal do
           | {:order_by, order_by_field() | [order_by_field]}
           | {:response_format, response_format}
           | {:where, String.t()}
-  @type request_option :: portal_option | query_option
+  @type request_option :: portal_option | query_option | {:transform, transform_fn}
   @type request_options :: [request_option()]
   @type request_data :: [url: String.t(), params: url_meta, headers: url_meta]
 
@@ -76,16 +77,16 @@ defmodule ArcGIS.Portal do
           (source :: map -> transformed :: term)
           | (source :: map, metadata :: map -> transformed :: term)
 
-  @type get_options :: {:transform, transform_fn} | {:verify_tls, boolean}
-  @type post_options :: {:transform, transform_fn} | {:verify_tls, boolean}
+  @type get_options :: request_option()
+  @type post_options :: request_option()
   @type form_data :: map
 
   @arcgis_online_baseurl URI.new!("https://arcgis.com/")
 
-  @spec new(url :: String.t()) :: {:ok, t()} | {:error, reason :: String}
+  @spec new(url :: String.t()) :: {:ok, t()} | {:error, reason :: String.t()}
   @doc "Create a `t:Portal.t/0` from its base URL."
   def new(url) do
-    {:ok, %__MODULE__{base_url: URI.new!(url)}}
+    {:ok, %__MODULE__{base_url: URI.new!(url), help_url: :unknown}}
   rescue
     _error -> {:error, "Bad portal #{inspect(url)}"}
   end
@@ -151,7 +152,7 @@ defmodule ArcGIS.Portal do
     )
   end
 
-  @spec get(t(), resource :: String.t(), [get_options]) ::
+  @spec get(t(), resource :: String.t() | URI.t(), [get_options]) ::
           {:ok, ArcGIS.Portal.ResultSet.t() | map() | term()} | {:error, reason :: String.t()}
   @doc """
   Performs an HTTP GET request, checking for errors.
@@ -187,8 +188,8 @@ defmodule ArcGIS.Portal do
     end
   end
 
-  @spec post(t(), resource :: String.t(), form_data, [post_options]) ::
-          {:ok, Portal.ResultSet.t() | map() | term()} | {:error, reason :: String.t()}
+  @spec post(t(), resource :: String.t() | URI.t(), form_data, [post_options]) ::
+          {:ok, ArcGIS.Portal.ResultSet.t() | map() | term()} | {:error, reason :: String.t()}
   @doc """
   Performs an HTTP POST request, checking for errors.
 
@@ -327,10 +328,10 @@ defmodule ArcGIS.Portal do
 
   @spec build_request(
           portal :: t(),
-          relative_path :: String.t(),
+          relative_path :: String.t() | URI.t(),
           form_data :: map(),
           request_options
-        ) :: request_data
+        ) :: {request_data, form_data}
   # Returns the url, parameters, and headers for an HTTP request given a path to an endpoint relative to the
   # Portal's default URL and additional options such as authentication information.
   #
@@ -425,7 +426,7 @@ defmodule ArcGIS.Portal do
   defp create_sharing_api_url(url, _portal), do: url
 
   @spec query_parameters(
-          options :: [query_option],
+          options :: request_options(),
           form_data :: list | map,
           is_features_query? :: boolean
         ) :: map
@@ -478,8 +479,7 @@ defmodule ArcGIS.Portal do
   defp order_by_field(order_by) when not is_nil(order_by) and order_by != [] do
     order_by
     |> List.wrap()
-    |> Enum.map(&to_order_by_field/1)
-    |> Enum.join(", ")
+    |> Enum.map_join(", ", &to_order_by_field/1)
   end
 
   defp order_by_field(_order_by), do: nil
