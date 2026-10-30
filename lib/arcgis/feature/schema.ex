@@ -31,7 +31,8 @@ defmodule ArcGIS.Feature.Schema do
   @typedoc "A schema, with names of tables and layers and their individual storage schemas"
   @type t :: %{[String.t()] => store}
 
-  @spec get(Service.t(), Portal.portal_options()) :: {:ok, t()} | {:error, reason :: String.t()}
+  @spec get(Service.t(), ArcGIS.Portal.portal_options()) ::
+          {:ok, t()} | {:error, reason :: String.t()}
   @doc "Retrieves the schema for a feature service"
   def get(%Service{} = service, options) do
     with {:ok, %{"layers" => layers, "tables" => tables}} <-

@@ -20,7 +20,7 @@ defmodule ArcGIS.SpatialReference do
   A SpatialReference struct consists of a well-known ID and a list of
   equivalent IDs (if any).
   """
-  @type t :: %{wkid: non_neg_integer, alternatives: [non_neg_integer]}
+  @type t :: %__MODULE__{wkid: non_neg_integer(), alternatives: [non_neg_integer()]}
 
   @spec from_map(source :: map) :: t()
   @doc "Creates a `%ArcGIS.SpatialReference{}` from ArcGIS response data"
