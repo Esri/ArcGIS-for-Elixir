@@ -23,7 +23,7 @@ defmodule ArcGIS.Portal do
   alias ArcGIS.Utils
 
   @enforce_keys [:base_url]
-  defstruct [:base_url, :help_url, type: :unknown, version: :unknown, verify_tls: true]
+  defstruct [:base_url, help_url: :unknown, type: :unknown, version: :unknown, verify_tls: true]
 
   @typedoc "A portal item ID"
   @type id :: String.t()
@@ -86,7 +86,7 @@ defmodule ArcGIS.Portal do
   @spec new(url :: String.t()) :: {:ok, t()} | {:error, reason :: String.t()}
   @doc "Create a `t:Portal.t/0` from its base URL."
   def new(url) do
-    {:ok, %__MODULE__{base_url: URI.new!(url), help_url: :unknown}}
+    {:ok, %__MODULE__{base_url: URI.new!(url)}}
   rescue
     _error -> {:error, "Bad portal #{inspect(url)}"}
   end
