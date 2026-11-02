@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
- defmodule ArcGIS.Feature.Service.CreateParameters do
+defmodule ArcGIS.Feature.Service.CreateParameters do
   @moduledoc "See https://developers.arcgis.com/rest/users-groups-and-items/create-service/"
 
   # TODO: consider adding the following fields:

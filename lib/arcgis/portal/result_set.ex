@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
- defmodule ArcGIS.Portal.ResultSet do
+defmodule ArcGIS.Portal.ResultSet do
   @moduledoc """
   A struct representing a paged set of results from an ArcGIS Portal query.
 

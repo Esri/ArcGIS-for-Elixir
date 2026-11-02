@@ -24,7 +24,7 @@ defmodule ArcGIS.AsyncJob do
   attempt to run the request asyncronously, and on success will return an
   `%ArcGIS.AsyncJob{}` struct.
 
-  To check on a job's status, pass an `%ArcGIS.AsyncJob{}` struct to 
+  To check on a job's status, pass an `%ArcGIS.AsyncJob{}` struct to
   `ArcGIS.AyncJob.update/2`.
   """
   alias ArcGIS.Telemetry
@@ -63,7 +63,7 @@ defmodule ArcGIS.AsyncJob do
   Attempts to fetch the update URL of the async job passed in,
   and returns a new `%ArcGIS.AsyncJob{}` struct.
 
-  On job completion, any job result data will be returned as the 
+  On job completion, any job result data will be returned as the
   third member of the returned tuple.
   """
   def update(%__MODULE__{} = job, options \\ []) do

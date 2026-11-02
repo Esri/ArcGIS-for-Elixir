@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
- defmodule ArcGIS.Feature.Domain.Inherited do
+defmodule ArcGIS.Feature.Domain.Inherited do
   @moduledoc """
   A field whose domain is inherited. The name is the actual domain to use for this field.
   """

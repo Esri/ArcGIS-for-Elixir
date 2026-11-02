@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
- defmodule ArcGIS.Portal.Macros do
+defmodule ArcGIS.Portal.Macros do
   @moduledoc false
 
   defmacro geometry_module_for(esri_type, geometry_module_string) do

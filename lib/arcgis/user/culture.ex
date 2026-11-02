@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
- defmodule ArcGIS.User.Culture do
+defmodule ArcGIS.User.Culture do
   @moduledoc "Cultural settings information"
   defstruct [:code, :format, :units]
 

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
- defmodule ArcGIS.Feature.Domain.Range do
+defmodule ArcGIS.Feature.Domain.Range do
   @moduledoc """
   A numerically constrained field. Ranges are named and have a minimum and maximum allowed value.
   """

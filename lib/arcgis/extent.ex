@@ -25,7 +25,7 @@ defmodule ArcGIS.Extent do
   @doc """
   Creates an `%ArcGIS.Extent{}` struct from an array as typically returned by ArcGIS.
 
-  It expects two elements in the an array, each containing two coordinates, 
+  It expects two elements in the an array, each containing two coordinates,
   such as `[[north, west], [south, east]]`. Otherwise, it will return an empty extent.
   """
   def new([nw, se]) do
