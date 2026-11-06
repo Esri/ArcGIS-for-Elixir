@@ -105,56 +105,6 @@ defmodule ArcGIS.Portal.Item do
           title: String.t()
         }
 
-  @typedoc """
-  Explicit item changes. Omitted fields are left unchanged.
-
-  Tags, categories, and type keywords are lists of strings; properties is a map.
-  Extent, spatial reference, and file uploads are not supported.
-  """
-  @type changes :: %{
-          optional(:title) => String.t(),
-          optional(:thumbnailUrl) => String.t(),
-          optional(:type_keywords) => [String.t()],
-          optional(:description) => String.t(),
-          optional(:tags) => [String.t()],
-          optional(:snippet) => String.t(),
-          optional(:accessInformation) => String.t(),
-          optional(:licenseInfo) => String.t(),
-          optional(:culture) => String.t(),
-          optional(:properties) => map(),
-          optional(:url) => String.t(),
-          optional(:serviceUsername) => String.t(),
-          optional(:servicePassword) => String.t(),
-          optional(:categories) => [String.t()],
-          optional(:text) => String.t(),
-          optional(:dataUrl) => String.t()
-        }
-
-  @typedoc "An item and its explicit changes."
-  @type item_patch :: {t(), changes()}
-
-  @typedoc "Item IDs successfully updated and individual update failures."
-  @type patch_results :: %{
-          updates: [String.t()],
-          failures: [{String.t(), String.t()}]
-        }
-
-  @typedoc "A request failure and the results accumulated before it occurred."
-  @type patch_request_error :: %{reason: String.t(), results: patch_results()}
-
-  @typedoc "Validation errors, request failures with partial results, or request error strings."
-  @type patch_error ::
-          validation_errors() | patch_request_error() | String.t()
-
-  @typedoc "Validation errors associated with item IDs."
-  @type validation_errors :: [{item_id :: String.t(), reason :: String.t()}]
-
-  @supported_patch_fields ~w(
-    title thumbnailUrl type_keywords description tags snippet
-    accessInformation licenseInfo culture properties url
-    serviceUsername servicePassword categories text dataUrl
-  )a
-
   @spec query(Portal.t(), portal_item_search_terms, options :: [Portal.portal_option()]) ::
           {:ok, ArcGIS.Portal.ResultSet.t()} | {:error, reason :: String.t()}
   @doc "Queries an ArcGIS portal for one or more items"
@@ -307,85 +257,28 @@ defmodule ArcGIS.Portal.Item do
     end
   end
 
-  @spec patch(Portal.t(), item_patch() | [item_patch()], Portal.portal_options()) ::
-          {:ok, patch_results()}
-          | {:error, patch_error()}
-
-  @doc """
-  Patches an existing Portal Item.
-
-  Accepts `{item, changes}` or a list of such tuples. Only fields present in
-  `changes` are sent; omitted fields are left unchanged.
-
-  List fields such as categories, tags, and type keywords replace the existing
-  lists rather than append to them. An empty list clears the corresponding
-  field.
-
-  The library does not merge changes with existing item values. Structured
-  fields such as `properties` are passed to ArcGIS, whose update semantics
-  apply.
-
-  All changes maps are validated before any requests are sent. Invalid input
-  returns `{:error, [{item_id, reason}]}`, with one entry per validation error.
-
-  Updates items sequentially unless every item’s changes contain only `:categories`,
-  in which case a single bulk update request is sent.
-
-  A sequential request failure stops processing and returns the request reason
-  with the results accumulated so far. A bulk request failure returns its reason.
-
-  ## Examples
-
-      Item.patch(portal, {item, %{title: "New title"}}, options)
-
-      Item.patch(portal, [
-        {item_a, %{categories: ["/Categories/Planning"]}},
-        {item_b, %{categories: []}}
-      ], options)
-  """
-  def patch(%Portal{} = portal, {%__MODULE__{}, _} = update, options) do
-    patch(portal, [update], options)
-  end
-
-  def patch(%Portal{}, [], _options), do: {:ok, %{updates: [], failures: []}}
-
-  def patch(%Portal{} = portal, updates, options) when is_list(updates) do
-    case validate_patches(updates) do
-      [] ->
-        if Enum.all?(updates, fn {_item, changes} -> Map.keys(changes) == [:categories] end) do
-          patch_categories(portal, updates, options)
-        else
-          patch_items_sequentially(portal, updates, options)
-        end
-
-      errors ->
-        {:error, errors}
-    end
-  end
-
   @spec update(Portal.t(), t() | [t()], [Portal.portal_option()]) :: %{
           updates: [id :: String.t()],
           failures: [{id :: String.t(), reason :: String.t()}]
         }
-  @doc """
-  Updates whole items. Prefer patch/3 with explicit changes. Fields with `nil`
-  values are sent as empty form field values, not omitted. ArcGIS determines how
-  those empty values are applied.
-  """
-  @deprecated "Use patch/3 with explicit changes instead"
   def update(%Portal{} = portal, %__MODULE__{} = item, options) do
     update(portal, [item], options)
   end
 
   def update(%Portal{} = portal, items, options) when is_list(items) do
-    Enum.reduce(items, %{updates: [], failures: []}, fn item, acc ->
-      case update_item(portal, item, options) do
-        :ok ->
-          %{acc | updates: [item.id | acc.updates]}
+    items
+    |> Task.async_stream(
+      fn item ->
+        {item.id, update_item(portal, item, options)}
+      end,
+      timeout: :infinity
+    )
+    |> Enum.reduce(%{updates: [], failures: []}, fn
+      {:ok, {id, :ok}}, acc ->
+        %{acc | updates: [id | acc.updates]}
 
-        {:error, reason} ->
-          %{acc | failures: [{item.id, reason} | acc.failures]}
-      end
+      {:ok, {id, {:error, reason}}}, acc ->
+        %{acc | failures: [{id, reason} | acc.failures]}
     end)
   end
 
@@ -421,108 +314,9 @@ defmodule ArcGIS.Portal.Item do
     end
   end
 
-  defp validate_patches(updates) do
-    Enum.flat_map(updates, fn {item, changes} ->
-      Enum.map(validate_changes(changes), fn reason -> {item.id, reason} end)
-    end)
-  end
-
-  defp validate_changes(changes) when not is_map(changes),
-    do: ["Changes must be a map"]
-
-  defp validate_changes(changes) when map_size(changes) == 0,
-    do: ["Changes are empty"]
-
-  defp validate_changes(changes) do
-    Enum.flat_map(changes, fn {key, value} ->
-      case validate_change(key, value) do
-        :ok -> []
-        {:error, reason} -> [reason]
-      end
-    end)
-  end
-
-  defp validate_change(key, value) when key in [:categories, :type_keywords, :tags] do
-    case is_list(value) and Enum.all?(value, &is_binary/1) do
-      true -> :ok
-      false -> {:error, "#{key} must be a list of strings"}
-    end
-  end
-
-  defp validate_change(:properties, value) do
-    case is_map(value) do
-      true -> :ok
-      false -> {:error, "properties must be a map"}
-    end
-  end
-
-  defp validate_change(key, value) when key in @supported_patch_fields do
-    case is_binary(value) do
-      true -> :ok
-      false -> {:error, "#{key} must be a string"}
-    end
-  end
-
-  defp validate_change(key, _value),
-    do: {:error, "Unsupported change field: #{inspect(key)}"}
-
-  defp patch_categories(portal, updates, options) when is_list(updates) do
-    resource = "/content/updateItems"
-
-    payload =
-      Enum.map(updates, fn {item, changes} ->
-        %{item.id => %{categories: changes.categories}}
-      end)
-
-    params = %{items: payload |> :json.encode() |> IO.iodata_to_binary()}
-    form_data = %{}
-    update_options = Keyword.merge(options, params: params)
-
-    case Portal.post(portal, resource, form_data, update_options) do
-      {:ok, %{"results" => results}} ->
-        transformed_results =
-          Enum.reduce(
-            results,
-            %{updates: [], failures: []},
-            fn
-              %{"itemId" => id, "success" => true}, acc ->
-                %{acc | updates: [id | acc.updates]}
-
-              %{"itemId" => id} = result, acc ->
-                %{acc | failures: [{id, result["error"]} | acc.failures]}
-            end
-          )
-
-        {:ok, transformed_results}
-
-      {:error, reason} ->
-        {:error, reason}
-
-      response ->
-        {:error, "Unexpected category update response: #{inspect(response)}"}
-    end
-  end
-
-  defp patch_items_sequentially(portal, updates, options) do
-    Enum.reduce_while(
-      updates,
-      {:ok, %{updates: [], failures: []}},
-      fn {item, changes}, {:ok, results} ->
-        case patch_item(portal, item, changes, options) do
-          :ok ->
-            results = %{results | updates: [item.id | results.updates]}
-            {:cont, {:ok, results}}
-
-          {:error, reason} ->
-            {:halt, {:error, %{reason: reason, results: results}}}
-        end
-      end
-    )
-  end
-
-  defp patch_item(portal, item, changes, options) do
+  defp update_item(portal, item, options) do
     resource = "/content/users/#{item.owner}/items/#{item.id}/update"
-    form_data = serialize_item_fields(changes)
+    form_data = serialize_item_fields(item)
 
     case Portal.post(portal, resource, form_data, options) do
       {:ok, %{"id" => id, "success" => true}} when id == item.id ->
@@ -536,38 +330,17 @@ defmodule ArcGIS.Portal.Item do
     end
   end
 
-  defp update_item(portal, item, options) do
-    patch_item(portal, item, update_fields(item), options)
-  end
+  defp serialize_item_fields(%__MODULE__{} = item) do
+    # Make sure that we pass proper form data to ArcGIS
 
-  defp update_fields(item) do
-    %{
-      accessInformation: item.accessInformation,
-      categories: item.categories,
-      culture: item.culture,
-      description: item.description,
-      documentation: item.documentation,
-      licenseInfo: item.licenseInfo,
-      name: item.name,
-      properties: item.properties,
-      proxyFilter: item.proxyFilter,
-      snippet: item.snippet,
-      tags: item.tags,
-      thumbnail: item.thumbnail,
-      title: item.title,
-      type: item.type,
-      type_keywords: item.type_keywords,
-      url: item.url
-    }
-  end
-
-  defp serialize_item_fields(changes) do
-    Map.new(changes, fn
+    item
+    |> Map.from_struct()
+    |> Map.new(fn
       {:type_keywords, nil} ->
-        {:typeKeywords, nil}
+        {:typeKeywords, ""}
 
       {key, nil} ->
-        {key, nil}
+        {key, ""}
 
       {:type_keywords, values} ->
         {:typeKeywords, Enum.join(values, ",")}
