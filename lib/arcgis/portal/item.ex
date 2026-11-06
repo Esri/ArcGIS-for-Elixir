@@ -14,7 +14,8 @@
 
 defmodule ArcGIS.Portal.Item do
   @moduledoc """
-  Provides a struct for ArcGIS portal items and means to fetch and query them.
+  Provides a struct for ArcGIS portal items and functions to query, fetch,
+  create, update, delete, and share them.
   """
 
   alias ArcGIS.Portal
@@ -265,32 +266,20 @@ defmodule ArcGIS.Portal.Item do
   end
 
   def update(%Portal{} = portal, items, options) when is_list(items) do
-    resource = "/content/updateItems"
-    updates = Enum.map(items, fn item -> %{item.id => update_fields(item)} end)
-    params = %{items: :json.encode(updates)}
-    form_data = %{}
-    update_options = Keyword.merge(options, params: params)
+    items
+    |> Task.async_stream(
+      fn item ->
+        {item.id, update_item(portal, item, options)}
+      end,
+      timeout: :infinity
+    )
+    |> Enum.reduce(%{updates: [], failures: []}, fn
+      {:ok, {id, :ok}}, acc ->
+        %{acc | updates: [id | acc.updates]}
 
-    case Portal.post(portal, resource, form_data, update_options) do
-      {:ok, %{"results" => results}} ->
-        Enum.reduce(
-          results,
-          %{updates: [], failures: []},
-          fn
-            %{"itemId" => id, "success" => true}, acc ->
-              %{acc | updates: [id | acc.updates]}
-
-            %{"itemId" => id} = result, acc ->
-              %{acc | failures: [{id, result["error"]} | acc.failures]}
-          end
-        )
-
-      {:error, _reason} = error ->
-        error
-
-      _ ->
-        {:error, "Query failed"}
-    end
+      {:ok, {id, {:error, reason}}}, acc ->
+        %{acc | failures: [{id, reason} | acc.failures]}
+    end)
   end
 
   @spec share(
@@ -325,25 +314,49 @@ defmodule ArcGIS.Portal.Item do
     end
   end
 
-  defp update_fields(item) do
-    %{
-      accessInformation: item.accessInformation,
-      categories: item.categories,
-      culture: item.culture,
-      description: item.description,
-      documentation: item.documentation,
-      licenseInfo: item.licenseInfo,
-      name: item.name,
-      properties: item.properties,
-      proxyFilter: item.proxyFilter,
-      snippet: item.snippet,
-      tags: item.tags,
-      thumbnail: item.thumbnail,
-      title: item.title,
-      type: item.type,
-      typeKeywords: item.type_keywords,
-      url: item.url
-    }
+  defp update_item(portal, item, options) do
+    resource = "/content/users/#{item.owner}/items/#{item.id}/update"
+    form_data = serialize_item_fields(item)
+
+    case Portal.post(portal, resource, form_data, options) do
+      {:ok, %{"id" => id, "success" => true}} when id == item.id ->
+        :ok
+
+      {:error, reason} ->
+        {:error, reason}
+
+      response ->
+        {:error, "Unexpected item update response: #{inspect(response)}"}
+    end
+  end
+
+  defp serialize_item_fields(%__MODULE__{} = item) do
+    # Make sure that we pass proper form data to ArcGIS
+
+    item
+    |> Map.from_struct()
+    |> Map.new(fn
+      {:type_keywords, nil} ->
+        {:typeKeywords, ""}
+
+      {key, nil} ->
+        {key, ""}
+
+      {:type_keywords, values} ->
+        {:typeKeywords, Enum.join(values, ",")}
+
+      {:tags, values} ->
+        {:tags, Enum.join(values, ",")}
+
+      {:categories, values} ->
+        {:categories, values |> :json.encode() |> IO.iodata_to_binary()}
+
+      {:properties, value} ->
+        {:properties, value |> :json.encode() |> IO.iodata_to_binary()}
+
+      {key, value} ->
+        {key, value}
+    end)
   end
 
   @spec from_map(map) :: t()
