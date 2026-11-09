@@ -41,4 +41,69 @@ defmodule ArcGIS.Test.Portal do
 
     assert ArcGIS.Portal.discover(Fixtures.portal()) == {:ok, Fixtures.portal(:discovered)}
   end
+
+  describe "item/get" do
+    test "An item deserializes properly" do
+      Req.Test.stub(
+        ArcGIS,
+        fn conn ->
+          {:ok, response} = ArcGIS.Test.Fixtures.Network.common_response(conn)
+          response
+        end
+      )
+
+      assert {:ok,
+              %ArcGIS.Portal.Item{
+                id: "66a0fa165d1649ce8048e64e3fb61504",
+                title: "Testing Async",
+                spatial_reference: %ArcGIS.SpatialReference{wkid: 102_100},
+                proxyFilter: %{},
+                scoreCompleteness: 16
+              }} = ArcGIS.Portal.Item.get(Fixtures.portal(), "test-feature-service")
+    end
+  end
+
+  describe "item/update" do
+    test "An item serializes properly and passes the Req's encoder" do
+      Req.Test.stub(
+        ArcGIS,
+        fn conn ->
+          case ArcGIS.Test.Fixtures.Network.common_response(conn) do
+            {:ok, response} ->
+              response
+
+            {:no_common_match, conn} ->
+              assert conn.method == "POST"
+
+              assert conn.request_path ==
+                       "/sharing/rest/content/users/urban_aaron_dev/items/66a0fa165d1649ce8048e64e3fb61504/update"
+
+              assert conn.body_params["spatialReference"] == "102100"
+              assert conn.body_params["typeKeywords"] == "Urban,Urban-Model"
+              assert conn.body_params["serviceProxyFilter"] == "{}"
+              assert conn.body_params["url"] == ""
+              assert conn.query_params["clearEmptyFields"] == "true"
+
+              assert conn.body_params["extent"] ==
+                       "5.952605381842136, 45.82037021294237, 10.49172963042796, 47.81009886898107"
+
+              refute Map.has_key?(conn.body_params, "type")
+              refute Map.has_key?(conn.body_params, "counts")
+              refute Map.has_key?(conn.body_params, "timestamps")
+
+              Req.Test.json(conn, %{
+                "id" => "66a0fa165d1649ce8048e64e3fb61504",
+                "success" => true
+              })
+          end
+        end
+      )
+
+      {:ok, item} = ArcGIS.Portal.Item.get(Fixtures.portal(), "test-feature-service")
+      item = %{item | url: nil}
+
+      assert ArcGIS.Portal.Item.update(Fixtures.portal(), item, params: %{clearEmptyFields: true}) ==
+               %{failures: [], updates: ["66a0fa165d1649ce8048e64e3fb61504"]}
+    end
+  end
 end
