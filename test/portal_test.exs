@@ -57,7 +57,7 @@ defmodule ArcGIS.Test.Portal do
                 id: "66a0fa165d1649ce8048e64e3fb61504",
                 title: "Testing Async",
                 spatial_reference: %ArcGIS.SpatialReference{wkid: 102_100},
-                proxyFilter: %{},
+                proxyFilter: nil,
                 scoreCompleteness: 16
               }} = ArcGIS.Portal.Item.get(Fixtures.portal(), "test-feature-service")
     end
@@ -80,7 +80,7 @@ defmodule ArcGIS.Test.Portal do
 
               assert conn.body_params["spatialReference"] == "102100"
               assert conn.body_params["typeKeywords"] == "Urban,Urban-Model"
-              assert conn.body_params["serviceProxyFilter"] == "{}"
+              assert conn.body_params["serviceProxyFilter"] == ""
               assert conn.body_params["url"] == ""
               assert conn.query_params["clearEmptyFields"] == "true"
 

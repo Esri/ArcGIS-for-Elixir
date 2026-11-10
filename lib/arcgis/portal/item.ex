@@ -35,9 +35,8 @@ defmodule ArcGIS.Portal.Item do
   # listed: undocumented
   # subInfo: undocumented
   # scoreCompleteness: undocumented
-  # proxyFilter: undocumented
 
-  @common_form_fields [
+  @form_fields [
     :title,
     :type_keywords,
     :description,
@@ -53,9 +52,6 @@ defmodule ArcGIS.Portal.Item do
     :proxyFilter,
     :categories
   ]
-
-  @update_form_fields @common_form_fields
-  @create_form_fields [:type | @common_form_fields]
 
   defstruct [
     :id,
@@ -373,7 +369,7 @@ defmodule ArcGIS.Portal.Item do
       accessInformation: lookup(arcgis_map, "accessInformation", ""),
       categories: lookup(arcgis_map, "categories", []),
       counts: counts_from_map(arcgis_map),
-      culture: lookup(arcgis_map, "culture", []),
+      culture: lookup(arcgis_map, "culture", ""),
       description: lookup(arcgis_map, "description", ""),
       documentation: lookup(arcgis_map, "documentation", ""),
       extent: ArcGIS.Extent.new(Map.get(arcgis_map, "extent")),
@@ -393,7 +389,7 @@ defmodule ArcGIS.Portal.Item do
       type: lookup(arcgis_map, "type", ""),
       type_keywords: lookup(arcgis_map, "typeKeywords", []),
       url: lookup(arcgis_map, "url", ""),
-      proxyFilter: lookup(arcgis_map, "proxyFilter", %{}),
+      proxyFilter: lookup(arcgis_map, "proxyFilter", nil),
       scoreCompleteness: lookup(arcgis_map, "scoreCompleteness", 0)
     }
   end
@@ -415,52 +411,77 @@ defmodule ArcGIS.Portal.Item do
   end
 
   defp as_form_data(item, operation) do
-    fields =
-      case operation do
-        :create -> @create_form_fields
-        :update -> @update_form_fields
+    Map.take(item, @form_fields)
+    |> add_operation_specific_form_fields(item, operation)
+    |> json_encode_fields([:categories, :properties, :proxyFilter])
+    |> encode_list_fields([:tags, :type_keywords])
+    |> encode_extent(:extent)
+    |> encode_spatial_reference(:spatial_reference)
+    |> rename_form_fields()
+  end
+
+  defp rename_form_fields(map) do
+    Enum.reduce(
+      [
+        type_keywords: :typeKeywords,
+        spatial_reference: :spatialReference,
+        proxyFilter: :serviceProxyFilter
+      ],
+      map,
+      fn {old_key, new_key}, acc ->
+        case Map.get(acc, old_key) do
+          nil ->
+            acc
+
+          value ->
+            acc |> Map.delete(old_key) |> Map.put(new_key, value)
+        end
       end
+    )
+  end
 
-    item
-    |> Map.from_struct()
-    |> Map.take(fields)
-    |> Map.new(fn
-      {:type_keywords, nil} ->
-        {:typeKeywords, nil}
+  defp add_operation_specific_form_fields(map, item, :create) do
+    Map.put(map, :type, item.type)
+  end
 
-      {:spatial_reference, nil} ->
-        {:spatialReference, nil}
+  defp add_operation_specific_form_fields(map, _item, :update), do: map
 
-      {:proxyFilter, nil} ->
-        {:serviceProxyFilter, nil}
+  defp json_encode_fields(map, fields) do
+    Enum.reduce(fields, map, fn field, acc ->
+      case Map.get(map, field) do
+        nil ->
+          acc
 
-      {key, nil} ->
-        {key, nil}
-
-      {:type_keywords, values} ->
-        {:typeKeywords, Enum.join(values, ",")}
-
-      {:extent, value} ->
-        {:extent, form_data_extent(value)}
-
-      {:proxyFilter, value} ->
-        {:serviceProxyFilter, value |> :json.encode() |> IO.iodata_to_binary()}
-
-      {:tags, values} ->
-        {:tags, Enum.join(values, ",")}
-
-      {:categories, values} ->
-        {:categories, values |> :json.encode() |> IO.iodata_to_binary()}
-
-      {:properties, value} ->
-        {:properties, value |> :json.encode() |> IO.iodata_to_binary()}
-
-      {:spatial_reference, value} ->
-        {:spatialReference, ArcGIS.SpatialReference.best_srid(value)}
-
-      {key, value} ->
-        {key, value}
+        value ->
+          Map.put(acc, field, value |> :json.encode() |> IO.iodata_to_binary())
+      end
     end)
+  end
+
+  defp encode_spatial_reference(map, field) do
+    case Map.get(map, field) do
+      nil ->
+        map
+
+      value ->
+        Map.put(map, field, ArcGIS.SpatialReference.best_srid(value))
+    end
+  end
+
+  defp encode_list_fields(map, fields) do
+    Enum.reduce(fields, map, fn field, acc ->
+      case Map.get(acc, field) do
+        nil -> acc
+        values -> Map.put(acc, field, Enum.join(values, ","))
+      end
+    end)
+  end
+
+  defp encode_extent(map, field) do
+    case Map.get(map, field) do
+      nil -> map
+      extent -> Map.put(map, field, form_data_extent(extent))
+    end
   end
 
   defp form_data_extent(extent) do
