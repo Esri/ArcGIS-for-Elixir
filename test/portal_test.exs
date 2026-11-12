@@ -80,7 +80,7 @@ defmodule ArcGIS.Test.Portal do
 
               assert conn.body_params["spatialReference"] == "102100"
               assert conn.body_params["typeKeywords"] == "Urban,Urban-Model"
-              assert conn.body_params["serviceProxyFilter"] == ""
+              refute Map.has_key?(conn.body_params, "serviceProxyFilter")
               assert conn.body_params["url"] == ""
               assert conn.query_params["clearEmptyFields"] == "true"
 
