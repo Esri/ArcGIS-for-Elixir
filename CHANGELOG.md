@@ -4,11 +4,15 @@ All notable changes to this project will be documented in this file.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v1.0.2
+
+* Fixes
+  * Small refactors in `ArcGIS.Portal.Item.update/3`, improve updating extents and SRIDs
+
 ## v1.0.1
 
 * Fixes
   * `ArcGIS.Portal.Item.update/3` updates more than only item categories, parallelizes updates
-
 
 ## v1.0.0
 
