@@ -419,16 +419,16 @@ defmodule ArcGIS.Portal.Item do
     |> encode_list_fields([:tags, :type_keywords])
     |> encode_extent(:extent)
     |> encode_spatial_reference(:spatial_reference)
-    |> rename_form_fields()
+    |> rename_form_fields(
+      type_keywords: :typeKeywords,
+      spatial_reference: :spatialReference,
+      proxyFilter: :serviceProxyFilter
+    )
   end
 
-  defp rename_form_fields(map) do
+  defp rename_form_fields(map, fields) do
     Enum.reduce(
-      [
-        type_keywords: :typeKeywords,
-        spatial_reference: :spatialReference,
-        proxyFilter: :serviceProxyFilter
-      ],
+      fields,
       map,
       fn {old_key, new_key}, acc ->
         case Map.get(acc, old_key) do
