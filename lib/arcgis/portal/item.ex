@@ -414,6 +414,7 @@ defmodule ArcGIS.Portal.Item do
 
   defp as_form_data(item, operation) do
     Map.take(item, @form_fields)
+    |> Map.reject(fn {_, val} -> val == nil end)
     |> add_operation_specific_form_fields(item, operation)
     |> json_encode_fields([:categories, :properties, :proxyFilter])
     |> encode_list_fields([:tags, :type_keywords])
@@ -432,11 +433,8 @@ defmodule ArcGIS.Portal.Item do
       map,
       fn {old_key, new_key}, acc ->
         case Map.get(acc, old_key) do
-          nil ->
-            acc
-
-          value ->
-            acc |> Map.delete(old_key) |> Map.put(new_key, value)
+          nil -> acc
+          value -> acc |> Map.delete(old_key) |> Map.put(new_key, value)
         end
       end
     )
@@ -450,40 +448,24 @@ defmodule ArcGIS.Portal.Item do
 
   defp json_encode_fields(map, fields) do
     Enum.reduce(fields, map, fn field, acc ->
-      case Map.get(map, field) do
-        nil ->
-          acc
-
-        value ->
-          Map.put(acc, field, value |> :json.encode() |> IO.iodata_to_binary())
-      end
+      Map.replace_lazy(acc, field, fn value ->
+        value |> :json.encode() |> IO.iodata_to_binary()
+      end)
     end)
   end
 
   defp encode_spatial_reference(map, field) do
-    case Map.get(map, field) do
-      nil ->
-        map
-
-      value ->
-        Map.put(map, field, ArcGIS.SpatialReference.best_srid(value))
-    end
+    Map.replace_lazy(map, field, &ArcGIS.SpatialReference.best_srid/1)
   end
 
   defp encode_list_fields(map, fields) do
     Enum.reduce(fields, map, fn field, acc ->
-      case Map.get(acc, field) do
-        nil -> acc
-        values -> Map.put(acc, field, Enum.join(values, ","))
-      end
+      Map.replace_lazy(acc, field, &Enum.join(&1, ","))
     end)
   end
 
   defp encode_extent(map, field) do
-    case Map.get(map, field) do
-      nil -> map
-      extent -> Map.put(map, field, form_data_extent(extent))
-    end
+    Map.replace_lazy(map, field, &form_data_extent/1)
   end
 
   defp form_data_extent(extent) do

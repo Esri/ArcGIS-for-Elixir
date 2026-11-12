@@ -80,8 +80,6 @@ defmodule ArcGIS.Test.Portal do
 
               assert conn.body_params["spatialReference"] == "102100"
               assert conn.body_params["typeKeywords"] == "Urban,Urban-Model"
-              refute Map.has_key?(conn.body_params, "serviceProxyFilter")
-              assert conn.body_params["url"] == ""
               assert conn.query_params["clearEmptyFields"] == "true"
 
               assert conn.body_params["extent"] ==
@@ -90,6 +88,8 @@ defmodule ArcGIS.Test.Portal do
               refute Map.has_key?(conn.body_params, "type")
               refute Map.has_key?(conn.body_params, "counts")
               refute Map.has_key?(conn.body_params, "timestamps")
+              refute Map.has_key?(conn.body_params, "proxyFilter")
+              refute Map.has_key?(conn.body_params, "url")
 
               Req.Test.json(conn, %{
                 "id" => "66a0fa165d1649ce8048e64e3fb61504",
