@@ -34,28 +34,28 @@ defmodule ArcGIS.Portal.Item do
   # largeThumbnail: is this used?
   # listed: undocumented
   # subInfo: undocumented
-  # scoreCompleteness: undocumented
 
   @form_fields [
+    :accessInformation,
+    :categories,
+    :culture,
+    :description,
+    :extent,
+    :licenseInfo,
+    :properties,
+    :proxyFilter,
     :title,
     :type_keywords,
-    :description,
-    :tags,
     :snippet,
-    :extent,
     :spatial_reference,
-    :accessInformation,
-    :licenseInfo,
-    :culture,
-    :properties,
-    :url,
-    :proxyFilter,
-    :categories
+    :tags,
+    :url
   ]
 
   defstruct [
     :id,
     :access,
+    # TODO: breaking change -> snake_case
     :accessInformation,
     :categories,
     :culture,
@@ -68,7 +68,9 @@ defmodule ArcGIS.Portal.Item do
     :counts,
     :owner,
     :properties,
+    # TODO: breaking change -> snake_case
     :proxyFilter,
+    # TODO: breaking change -> snake_case
     :scoreCompleteness,
     :screenshots,
     :size,
@@ -100,7 +102,9 @@ defmodule ArcGIS.Portal.Item do
           name: String.t(),
           owner: String.t(),
           properties: map,
+          proxyFilter: map(),
           screenshots: [String.t()],
+          scoreCompleteness: integer,
           size: integer,
           snippet: String.t(),
           spatial_reference: ArcGIS.SpatialReference.t(),
@@ -110,17 +114,15 @@ defmodule ArcGIS.Portal.Item do
           title: String.t(),
           type: String.t(),
           type_keywords: [String.t()],
-          url: String.t(),
-          proxyFilter: map(),
-          scoreCompleteness: integer
+          url: String.t()
         }
 
   @type portal_item_search_terms :: %{
-          search_text: String.t(),
           keywords: [{key :: String.t(), value :: String.t()}],
-          type: type :: String.t() | {type :: String.t(), keywords :: String.t()},
           owner: String.t(),
-          title: String.t()
+          search_text: String.t(),
+          title: String.t(),
+          type: type :: String.t() | {type :: String.t(), keywords :: String.t()}
         }
 
   @spec query(Portal.t(), portal_item_search_terms, options :: [Portal.portal_option()]) ::
