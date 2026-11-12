@@ -35,7 +35,23 @@ defmodule ArcGIS.Portal.Item do
   # listed: undocumented
   # subInfo: undocumented
   # scoreCompleteness: undocumented
-  # proxyFilter: undocumented
+
+  @form_fields [
+    :title,
+    :type_keywords,
+    :description,
+    :tags,
+    :snippet,
+    :extent,
+    :spatial_reference,
+    :accessInformation,
+    :licenseInfo,
+    :culture,
+    :properties,
+    :url,
+    :proxyFilter,
+    :categories
+  ]
 
   defstruct [
     :id,
@@ -94,7 +110,9 @@ defmodule ArcGIS.Portal.Item do
           title: String.t(),
           type: String.t(),
           type_keywords: [String.t()],
-          url: String.t()
+          url: String.t(),
+          proxyFilter: map(),
+          scoreCompleteness: integer
         }
 
   @type portal_item_search_terms :: %{
@@ -156,7 +174,7 @@ defmodule ArcGIS.Portal.Item do
     folder = if item.folder == nil, do: nil, else: "/#{item.folder}"
     resource = "/content/users/#{owner}#{folder}/addItem"
 
-    form_data = as_create_form_data(item)
+    form_data = as_form_data(item, :create)
 
     case Portal.post(portal, resource, form_data, options) do
       {:ok, %{"id" => id}} ->
@@ -316,7 +334,7 @@ defmodule ArcGIS.Portal.Item do
 
   defp update_item(portal, item, options) do
     resource = "/content/users/#{item.owner}/items/#{item.id}/update"
-    form_data = serialize_item_fields(item)
+    form_data = as_form_data(item, :update)
 
     case Portal.post(portal, resource, form_data, options) do
       {:ok, %{"id" => id, "success" => true}} when id == item.id ->
@@ -328,35 +346,6 @@ defmodule ArcGIS.Portal.Item do
       response ->
         {:error, "Unexpected item update response: #{inspect(response)}"}
     end
-  end
-
-  defp serialize_item_fields(%__MODULE__{} = item) do
-    # Make sure that we pass proper form data to ArcGIS
-
-    item
-    |> Map.from_struct()
-    |> Map.new(fn
-      {:type_keywords, nil} ->
-        {:typeKeywords, ""}
-
-      {key, nil} ->
-        {key, ""}
-
-      {:type_keywords, values} ->
-        {:typeKeywords, Enum.join(values, ",")}
-
-      {:tags, values} ->
-        {:tags, Enum.join(values, ",")}
-
-      {:categories, values} ->
-        {:categories, values |> :json.encode() |> IO.iodata_to_binary()}
-
-      {:properties, value} ->
-        {:properties, value |> :json.encode() |> IO.iodata_to_binary()}
-
-      {key, value} ->
-        {key, value}
-    end)
   end
 
   @spec from_map(map) :: t()
@@ -380,7 +369,7 @@ defmodule ArcGIS.Portal.Item do
       accessInformation: lookup(arcgis_map, "accessInformation", ""),
       categories: lookup(arcgis_map, "categories", []),
       counts: counts_from_map(arcgis_map),
-      culture: lookup(arcgis_map, "culture", []),
+      culture: lookup(arcgis_map, "culture", ""),
       description: lookup(arcgis_map, "description", ""),
       documentation: lookup(arcgis_map, "documentation", ""),
       extent: ArcGIS.Extent.new(Map.get(arcgis_map, "extent")),
@@ -399,7 +388,9 @@ defmodule ArcGIS.Portal.Item do
       title: lookup(arcgis_map, "title", ""),
       type: lookup(arcgis_map, "type", ""),
       type_keywords: lookup(arcgis_map, "typeKeywords", []),
-      url: lookup(arcgis_map, "url", "")
+      url: lookup(arcgis_map, "url", ""),
+      proxyFilter: lookup(arcgis_map, "proxyFilter", nil),
+      scoreCompleteness: lookup(arcgis_map, "scoreCompleteness", 0)
     }
   end
 
@@ -419,27 +410,78 @@ defmodule ArcGIS.Portal.Item do
     end
   end
 
-  defp as_create_form_data(item) do
-    %{
-      accessInformation: item.accessInformation,
-      categories: :json.encode(item.categories),
-      culture: item.culture,
-      description: item.description,
-      documentation: item.documentation,
-      extent: form_data_extent(item.extent),
-      licenseInfo: item.licenseInfo,
-      name: item.name,
-      properties: :json.encode(item.properties),
-      proxyFilter: item.proxyFilter,
-      snippet: item.snippet,
-      spatialReference: ArcGIS.SpatialReference.best_srid(item.spatial_reference),
-      tags: Enum.join(item.tags, ", "),
-      thumbnail: item.thumbnail,
-      title: item.title,
-      type: item.type,
-      type_keywords: Enum.join(item.type_keywords, ", "),
-      url: item.url
-    }
+  defp as_form_data(item, operation) do
+    Map.take(item, @form_fields)
+    |> add_operation_specific_form_fields(item, operation)
+    |> json_encode_fields([:categories, :properties, :proxyFilter])
+    |> encode_list_fields([:tags, :type_keywords])
+    |> encode_extent(:extent)
+    |> encode_spatial_reference(:spatial_reference)
+    |> rename_form_fields()
+  end
+
+  defp rename_form_fields(map) do
+    Enum.reduce(
+      [
+        type_keywords: :typeKeywords,
+        spatial_reference: :spatialReference,
+        proxyFilter: :serviceProxyFilter
+      ],
+      map,
+      fn {old_key, new_key}, acc ->
+        case Map.get(acc, old_key) do
+          nil ->
+            acc
+
+          value ->
+            acc |> Map.delete(old_key) |> Map.put(new_key, value)
+        end
+      end
+    )
+  end
+
+  defp add_operation_specific_form_fields(map, item, :create) do
+    Map.put(map, :type, item.type)
+  end
+
+  defp add_operation_specific_form_fields(map, _item, :update), do: map
+
+  defp json_encode_fields(map, fields) do
+    Enum.reduce(fields, map, fn field, acc ->
+      case Map.get(map, field) do
+        nil ->
+          acc
+
+        value ->
+          Map.put(acc, field, value |> :json.encode() |> IO.iodata_to_binary())
+      end
+    end)
+  end
+
+  defp encode_spatial_reference(map, field) do
+    case Map.get(map, field) do
+      nil ->
+        map
+
+      value ->
+        Map.put(map, field, ArcGIS.SpatialReference.best_srid(value))
+    end
+  end
+
+  defp encode_list_fields(map, fields) do
+    Enum.reduce(fields, map, fn field, acc ->
+      case Map.get(acc, field) do
+        nil -> acc
+        values -> Map.put(acc, field, Enum.join(values, ","))
+      end
+    end)
+  end
+
+  defp encode_extent(map, field) do
+    case Map.get(map, field) do
+      nil -> map
+      extent -> Map.put(map, field, form_data_extent(extent))
+    end
   end
 
   defp form_data_extent(extent) do
