@@ -131,11 +131,11 @@ defmodule ArcGIS.Portal.Item do
   def query(%Portal{} = portal, search_terms, options \\ []) do
     query =
       []
-      |> add_portal_item_search_keywords(search_terms)
-      |> add_portal_item_search_text(search_terms)
-      |> add_portal_item_type(search_terms)
-      |> add_portal_item_owner(search_terms)
-      |> add_portal_item_title(search_terms)
+      |> add_portal_item_search_keywords_to_query(search_terms)
+      |> add_portal_item_search_text_to_query(search_terms)
+      |> add_portal_item_type_to_query(search_terms)
+      |> add_portal_item_owner_to_query(search_terms)
+      |> add_portal_item_title_to_query(search_terms)
       |> Enum.join(" AND ")
 
     all_options =
@@ -519,21 +519,21 @@ defmodule ArcGIS.Portal.Item do
     }
   end
 
-  defp add_portal_item_search_keywords(acc, search_terms) do
+  defp add_portal_item_search_keywords_to_query(acc, search_terms) do
     Map.get(search_terms, :keywords, [])
     |> Enum.reduce(acc, fn {key, value}, acc ->
       ["#{key}:\"#{value}\"" | acc]
     end)
   end
 
-  defp add_portal_item_search_text(acc, search_terms) do
+  defp add_portal_item_search_text_to_query(acc, search_terms) do
     case Map.get(search_terms, :search_text) do
       nil -> acc
       value -> [value | acc]
     end
   end
 
-  defp add_portal_item_type(acc, search_terms) do
+  defp add_portal_item_type_to_query(acc, search_terms) do
     case Map.get(search_terms, :type) do
       nil -> acc
       {type, keywords} -> ["type:\"#{type}\"", "typekeywords:\"#{keywords}\"" | acc]
@@ -541,14 +541,14 @@ defmodule ArcGIS.Portal.Item do
     end
   end
 
-  defp add_portal_item_owner(acc, search_terms) do
+  defp add_portal_item_owner_to_query(acc, search_terms) do
     case Map.get(search_terms, :owner) do
       nil -> acc
       value -> ["owner:#{value}" | acc]
     end
   end
 
-  defp add_portal_item_title(acc, search_terms) do
+  defp add_portal_item_title_to_query(acc, search_terms) do
     case Map.get(search_terms, :title) do
       nil -> acc
       value -> ["title:\"#{value}\"" | acc]
