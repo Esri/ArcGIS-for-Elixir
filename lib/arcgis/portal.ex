@@ -129,6 +129,23 @@ defmodule ArcGIS.Portal do
     get(portal, "/portals/self", options)
   end
 
+  @spec geometry_service_url(t(), [portal_option()]) :: {:ok, URI.t()} | {:error, term()}
+  @doc "Returns the geometry service URL configured for the portal."
+  def geometry_service_url(%__MODULE__{} = portal, options \\ []) do
+    with {:ok, info} <- self(portal, options) do
+      case get_in(info, ["helperServices", "geometry", "url"]) do
+        nil ->
+          {:error, "No geometry service configured for portal #{portal.base_url}"}
+
+        url when is_binary(url) and url != "" ->
+          URI.new(url)
+
+        _ ->
+          {:error, "Invalid geometry service URL for portal #{portal.base_url}"}
+      end
+    end
+  end
+
   @spec default_portal :: t()
   @doc """
   Returns the default portal. The portal (if any) defined in the
