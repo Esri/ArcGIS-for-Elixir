@@ -131,7 +131,7 @@ defmodule ArcGIS.Feature.Service do
       when is_map(definition) do
     with {:ok, uri} <- admin_url(service, options) do
       url = URI.append_path(uri, "/addToDefinition")
-      form = %{"addToDefinition" => definition |> :json.encode() |> IO.iodata_to_binary()}
+      form = %{"addToDefinition" => JSON.encode!(definition)}
 
       case Portal.post(service.portal, url, form, options) do
         {:ok, %{"success" => true}} -> :ok
