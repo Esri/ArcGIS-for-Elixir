@@ -124,6 +124,23 @@ defmodule ArcGIS.Feature.Service do
     end
   end
 
+  @doc "Adds the supplied definition to a feature service using its admin endpoint."
+  @spec add_to_definition(t(), map(), Portal.request_options()) ::
+          :ok | {:error, term()}
+  def add_to_definition(%__MODULE__{} = service, definition, options \\ [])
+      when is_map(definition) do
+    with {:ok, uri} <- admin_url(service, options) do
+      url = URI.append_path(uri, "/addToDefinition")
+      form = %{"addToDefinition" => definition |> :json.encode() |> IO.iodata_to_binary()}
+
+      case Portal.post(service.portal, url, form, options) do
+        {:ok, %{"success" => true}} -> :ok
+        {:ok, body} -> {:error, {:add_to_definition_failed, body}}
+        {:error, _} = error -> error
+      end
+    end
+  end
+
   @spec url(t()) :: {:ok, URI.t()} | {:error, term()}
   @spec url(t(), Portal.request_options()) :: {:ok, URI.t()} | {:error, term()}
   @doc """
