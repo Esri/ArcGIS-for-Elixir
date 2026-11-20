@@ -140,6 +140,22 @@ defmodule ArcGIS.Feature.Service do
     end
   end
 
+  @spec url(t()) :: {:ok, URI.t()} | {:error, term()}
+  @spec url(t(), Portal.request_options()) :: {:ok, URI.t()} | {:error, term()}
+  @doc """
+  Returns the admin access URL for a feature service.
+  """
+  def admin_url(%__MODULE__{} = service, options \\ []) do
+    case url(service, options) do
+      {:ok, %URI{} = uri} ->
+        path = String.replace(uri.path, "/rest/services/", "/rest/admin/services/", global: false)
+        {:ok, %{uri | path: path}}
+
+      error ->
+        error
+    end
+  end
+
   @doc """
   Fetches the schema for a feature servcie and on success assigned it to the
   `schema` field of the `Service.t()`
