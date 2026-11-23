@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v1.0.3
+
+* Improvements
+  * Added `name`, `cdn_url`, and `helper_services` to the `ArcGIS.Portal` struct, which are parsed from
+    the Portal's `self` endpoint when a portal struct is passed to `ArcIGS.Portal.discover/2`
+  * Added `ArcGIS.Feature.Service.admin_url/2` which returns the aministration URL for a given service
+  * Added `ArcGIS.Feature.Service.add_to_definition/2` which allows updating the service definition, such
+    as adding new or modifying existing layers and tables.
+
 ## v1.0.2
 
 * Fixes
