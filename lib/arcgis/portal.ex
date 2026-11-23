@@ -345,6 +345,8 @@ defmodule ArcGIS.Portal do
     end
   end
 
+  @spec geometry_module_for(esri_type :: String.t(), z? :: boolean, m? :: boolean) ::
+          geometry_struct :: atom
   def geometry_module_for("", _z, _m), do: :unknown
   Macros.geometry_module_for("esriGeometryMultipoint", "Geometry.MultiPoint")
   Macros.geometry_module_for("esriGeometryPoint", "Geometry.Point")

@@ -24,8 +24,6 @@ defmodule ArcGIS.Portal.Macros do
     geometry_zm = String.to_atom("Elixir." <> geometry_string <> "ZM")
 
     quote do
-      @spec geometry_module_for(esri_type :: String.t(), z? :: boolean, m? :: boolean) ::
-              geometry_struct :: atom
       def geometry_module_for(unquote(esri_type), false, false), do: unquote(geometry_atom)
       def geometry_module_for(unquote(esri_type), true, false), do: unquote(geometry_z)
       def geometry_module_for(unquote(esri_type), false, true), do: unquote(geometry_m)
