@@ -30,9 +30,109 @@ defmodule ArcGIS.Test.Fixtures do
 
   def portal(:discovered) do
     portal(:base)
-    |> Map.put(:type, :online)
-    |> Map.put(:version, {2026, 3})
-    |> Map.put(:help_url, URI.new!("https://doc.arcgis.com/en/arcgis-online/"))
+    |> Map.merge(%{
+      type: :online,
+      version: {2026, 3},
+      help_url: URI.new!("https://doc.arcgis.com/en/arcgis-online/"),
+      cdn_url: URI.new!("https://cdn.arcgis.com"),
+      helper_services: %{
+        "closestFacility" => %ArcGIS.Portal.HelperService{
+          auxiliary: [],
+          parameters: %{"defaultTravelMode" => "FEgifRtFndKNcJMJ"},
+          url: %URI{
+            scheme: "https",
+            userinfo: nil,
+            host: "route.arcgis.com",
+            port: 443,
+            path: "/arcgis/rest/services/World/ClosestFacility/NAServer/ClosestFacility_World",
+            query: nil,
+            fragment: nil
+          }
+        },
+        "defaultElevationLayers" => %ArcGIS.Portal.HelperService{
+          auxiliary: [
+            %{
+              url: %URI{
+                scheme: "https",
+                userinfo: nil,
+                host: "elevation3d.arcgis.com",
+                port: 443,
+                path: "/arcgis/rest/services/WorldElevation3D/Terrain3D/ImageServerFeet",
+                query: nil,
+                fragment: nil
+              },
+              parameters: %{
+                "id" => "auxiliaryElevation",
+                "layerType" => "ArcGISTiledElevationServiceLayer",
+                "units" => "esriFeet"
+              }
+            }
+          ],
+          parameters: %{
+            "id" => "globalElevation",
+            "layerType" => "ArcGISTiledElevationServiceLayer",
+            "units" => "esriMeters"
+          },
+          url: %URI{
+            scheme: "https",
+            userinfo: nil,
+            host: "elevation3d.arcgis.com",
+            port: 443,
+            path: "/arcgis/rest/services/WorldElevation3D/Terrain3D/ImageServer",
+            query: nil,
+            fragment: nil
+          }
+        },
+        "elevation" => %ArcGIS.Portal.HelperService{
+          auxiliary: [],
+          parameters: %{},
+          url: %URI{
+            scheme: "https",
+            userinfo: nil,
+            host: "elevation.arcgis.com",
+            port: 443,
+            path: "/arcgis/rest/services/Tools/Elevation/GPServer",
+            query: nil,
+            fragment: nil
+          }
+        },
+        "geocode" => %ArcGIS.Portal.HelperService{
+          auxiliary: [],
+          parameters: %{
+            "batch" => true,
+            "eastLon" => "Xmax",
+            "name" => "ArcGIS World Geocoding Service",
+            "northLat" => "Ymax",
+            "placefinding" => true,
+            "southLat" => "Ymin",
+            "suggest" => true,
+            "westLon" => "Xmin"
+          },
+          url: %URI{
+            scheme: "https",
+            userinfo: nil,
+            host: "geocode.arcgis.com",
+            port: 443,
+            path: "/arcgis/rest/services/World/GeocodeServer",
+            query: nil,
+            fragment: nil
+          }
+        },
+        "traffic" => %ArcGIS.Portal.HelperService{
+          auxiliary: [],
+          parameters: %{},
+          url: %URI{
+            scheme: "https",
+            userinfo: nil,
+            host: "traffic.arcgis.com",
+            port: 443,
+            path: "/arcgis/rest/services/World/Traffic/MapServer",
+            query: nil,
+            fragment: nil
+          }
+        }
+      }
+    })
   end
 
   def feature_service(which \\ :default)

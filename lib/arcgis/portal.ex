@@ -23,20 +23,42 @@ defmodule ArcGIS.Portal do
   alias ArcGIS.Utils
 
   @enforce_keys [:base_url]
-  defstruct [:base_url, help_url: :unknown, type: :unknown, version: :unknown, verify_tls: true]
+  defstruct [
+    :base_url,
+    help_url: :unknown,
+    cdn_url: :unknown,
+    helper_services: %{},
+    name: :unknown,
+    type: :unknown,
+    version: :unknown,
+    verify_tls: true
+  ]
 
   @typedoc "A portal item ID"
   @type id :: String.t()
 
-  @type portal_type :: :online | :enterprise | :unknown
+  @type portal_type :: :online | :enterprise | :other | :unknown
   @type portal_version :: {year :: number, release :: number} | :unknown
+
+  @type hosted_service_definition :: %{
+          url: URI.t(),
+          paramters: %{String.t() => String.t()}
+        }
+
+  @type hosted_service_name :: String.t()
 
   @typedoc """
   The configuration of an ArcGIS portal necessary for its use, in particular the base_url
   """
   @type t :: %__MODULE__{
           base_url: URI.t(),
+          cdn_url: URI.t() | :unknown,
           help_url: URI.t() | :unknown,
+          helper_services: %{
+            hosted_service_name =>
+              ArcGIS.Portal.HelperService.t() | [ArcGIS.Portal.HelperService.t()]
+          },
+          name: String.t() | :unknown,
           type: portal_type,
           version: portal_version,
           verify_tls: boolean
@@ -107,7 +129,10 @@ defmodule ArcGIS.Portal do
             portal
             | type: type_from_self(self),
               version: version_from_self(self),
-              help_url: help_url_from_self(self)
+              help_url: help_url_from_self(self),
+              cdn_url: cdn_url_from_self(self),
+              name: name_from_self(self),
+              helper_services: helper_services_from_self(self)
           }
         }
 
@@ -531,28 +556,84 @@ defmodule ArcGIS.Portal do
 
   defp version_from_self(_), do: :unknown
 
-  defp type_from_self(%{"portalDeploymentType" => type}) do
-    case type do
-      "ArcGISEnterprise" -> :enterprise
-      _ -> :unknown
+  defp name_from_self(%{"name" => name}) when is_binary(name), do: name
+  defp name_from_self(_), do: :unknown
+
+  defp type_from_self(self) do
+    cond do
+      Map.get(self, "portalDeploymentType") != nil -> :enterprise
+      String.ends_with?(Map.get(self, "portalHostname", ""), "arcgis.com") -> :online
+      true -> :other
     end
   end
-
-  defp type_from_self(%{"portalHostname" => hostname}) do
-    if String.ends_with?(hostname, "arcgis.com") do
-      :online
-    else
-      :unknown
-    end
-  end
-
-  defp type_from_self(_), do: :unknown
 
   defp help_url_from_self(self) do
-    with %{"helpBase" => url_string} <- self,
-         {:ok, uri} <- URI.new(url_string) do
-      uri
+    self
+    |> Map.get("helpBase")
+    |> parse_url()
+  end
+
+  defp cdn_url_from_self(self) do
+    self
+    |> Map.get("cdnUrl")
+    |> parse_url()
+  end
+
+  defp helper_services_from_self(%{"helperServices" => %{} = services}) do
+    services
+    |> Enum.reduce(
+      %{},
+      fn {key, value}, acc -> add_helper_service(key, value, acc) end
+    )
+  end
+
+  defp helper_services_from_self(_self), do: %{}
+
+  defp add_helper_service(key, %{} = value, acc) do
+    case as_helper_service(value) do
+      %ArcGIS.Portal.HelperService{} = service -> Map.put(acc, key, service)
+      _ -> acc
+    end
+  end
+
+  defp add_helper_service(key, [primary | auxiliary], acc) do
+    case as_helper_service(primary) do
+      %ArcGIS.Portal.HelperService{} = service ->
+        auxiliary_services = Enum.reduce(auxiliary, [], &add_auxiliary_service/2)
+        Map.put(acc, key, %{service | auxiliary: auxiliary_services})
+
+      _ ->
+        acc
+    end
+  end
+
+  defp add_auxiliary_service(value, list) do
+    case as_helper_service(value) do
+      %ArcGIS.Portal.HelperService{} = service ->
+        list ++ [Map.take(service, [:url, :parameters])]
+
+      _ ->
+        list
+    end
+  end
+
+  defp as_helper_service(value) do
+    with %{"url" => url_string} <- value,
+         url when url != :unknown <- parse_url(url_string) do
+      %ArcGIS.Portal.HelperService{
+        url: url,
+        parameters: Map.delete(value, "url")
+      }
     else
+      _ -> nil
+    end
+  end
+
+  defp parse_url(nil), do: :unknown
+
+  defp parse_url(url_string) do
+    case URI.new(url_string) do
+      {:ok, url} -> url
       _ -> :unknown
     end
   end
