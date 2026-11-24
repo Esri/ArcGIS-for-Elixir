@@ -30,6 +30,7 @@ defmodule ArcGIS.Portal do
     helper_services: %{},
     name: :unknown,
     type: :unknown,
+    properties: %{},
     version: :unknown,
     verify_tls: true
   ]
@@ -59,6 +60,7 @@ defmodule ArcGIS.Portal do
               ArcGIS.Portal.HelperService.t() | [ArcGIS.Portal.HelperService.t()]
           },
           name: String.t() | :unknown,
+          properties: map(),
           type: portal_type,
           version: portal_version,
           verify_tls: boolean
@@ -127,12 +129,13 @@ defmodule ArcGIS.Portal do
           :ok,
           %__MODULE__{
             portal
-            | type: type_from_self(self),
-              version: version_from_self(self),
+            | cdn_url: cdn_url_from_self(self),
               help_url: help_url_from_self(self),
-              cdn_url: cdn_url_from_self(self),
+              helper_services: helper_services_from_self(self),
               name: name_from_self(self),
-              helper_services: helper_services_from_self(self)
+              properties: properties_from_self(self),
+              type: type_from_self(self),
+              version: version_from_self(self)
           }
         }
 
@@ -590,6 +593,9 @@ defmodule ArcGIS.Portal do
   end
 
   defp helper_services_from_self(_self), do: %{}
+
+  defp properties_from_self(%{"portalProperties" => %{} = properties}), do: properties
+  defp properties_from_self(_self), do: %{}
 
   defp add_helper_service(key, %{} = value, acc) do
     case as_helper_service(value) do
