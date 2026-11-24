@@ -22,7 +22,6 @@ defmodule ArcGIS.User do
   # not included:
   #   * favGroupId
   #   * categories
-  #   * storageQuota
   #   * mfaEnabled
   #   * mfaEnformcementExempt
   #   * udn
@@ -44,6 +43,7 @@ defmodule ArcGIS.User do
     :region,
     :role,
     :storage_usage,
+    :storage_quota,
     :tags,
     :thumbnail,
     :timestamps,
@@ -72,6 +72,7 @@ defmodule ArcGIS.User do
           region: String.t(),
           role: Role.t(),
           storage_usage: non_neg_integer(),
+          storage_quota: non_neg_integer(),
           tags: [String.t()],
           thumbnail: String.t(),
           timestamps: Timestamps.t(),
@@ -150,7 +151,8 @@ defmodule ArcGIS.User do
       # Should region be in culture?
       region: Map.get(raw, "region", ""),
       role: Role.new(raw),
-      storage_usage: Map.get(raw, "storageUsage", ""),
+      storage_usage: Map.get(raw, "storageUsage", 0),
+      storage_quota: Map.get(raw, "storageQuota", 0),
       tags: Map.get(raw, "tags", []),
       thumbnail: Map.get(raw, "thumbnail", []),
       timestamps: timestamps_from_map(raw),
