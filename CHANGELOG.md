@@ -7,8 +7,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ## v1.0.3
 
 * Improvements
-  * Added `name`, `cdn_url`, and `helper_services` to the `ArcGIS.Portal` struct, which are parsed from
-    the Portal's `self` endpoint when a portal struct is passed to `ArcIGS.Portal.discover/2`
+  * Added `name`, `cdn_url`, `properties`, and `helper_services` to the `ArcGIS.Portal` struct, which are parsed from
+    the Portal's `self` endpoint when a portal struct is passed to `ArcIGS.Portal.discover/2`.
+  * Added `storage_quota` to the `ArcGIS.User` struct, and introduced `ArcGIS.User.subscriptions/2` which
+    returns the active subscriptions associated with a token.
   * Added `ArcGIS.Feature.Service.admin_url/2` which returns the aministration URL for a given service
   * Added `ArcGIS.Feature.Service.add_to_definition/2` which allows updating the service definition, such
     as adding new or modifying existing layers and tables.
