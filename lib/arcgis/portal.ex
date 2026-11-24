@@ -113,7 +113,7 @@ defmodule ArcGIS.Portal do
     _error -> {:error, "Bad portal #{inspect(url)}"}
   end
 
-  @spec discover((portal_url :: String.t()) | t(), options :: [portal_option]) ::
+  @spec discover((portal_url :: String.t()) | t(), options :: portal_options) ::
           {:ok, t()} | {:error, reason :: String.t()}
   @doc """
   Discovers the version, type (`:online` or `:enterprise`), etc. of a portal and returns a new `%ArcGIS.Portal{}` with this information
@@ -148,7 +148,7 @@ defmodule ArcGIS.Portal do
     end
   end
 
-  @spec self(t(), options :: [portal_option]) :: {:ok, map} | {:error, reason :: String.t()}
+  @spec self(t(), options :: portal_options) :: {:ok, map} | {:error, reason :: String.t()}
   @doc "Returns information about the Portal using the `self` query"
   def self(%__MODULE__{} = portal, options \\ []) do
     get(portal, "/portals/self", options)
