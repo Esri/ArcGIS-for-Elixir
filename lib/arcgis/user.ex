@@ -95,6 +95,18 @@ defmodule ArcGIS.User do
     end
   end
 
+  @spec subscriptions(Portal.t(), token :: String.t()) :: {:ok, map()} | {:error, term}
+  @doc """
+  Fetches subscription associated with the provided authorization token.
+  """
+  def subscriptions(%Portal{} = portal, token) when is_binary(token) do
+    case Portal.self(portal, auth_token: token) do
+      {:ok, %{"subscriptionInfo" => info}} -> info
+      {:ok, _} -> %{}
+      error -> error
+    end
+  end
+
   @spec can?(t(), privilege :: String.t()) :: boolean()
   @doc "Checks if a user has a given privilege"
   def can?(%__MODULE__{privileges: privileges}, privilege) do
