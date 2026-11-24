@@ -211,6 +211,7 @@ defmodule ArcGIS.Test.Fixtures do
         id: "vsa7oP1fZvDkRTT7",
         name: "org_publisher"
       },
+      storage_quota: 2_199_023_255_552,
       storage_usage: 294_423_245_635,
       tags: [],
       thumbnail: nil,
