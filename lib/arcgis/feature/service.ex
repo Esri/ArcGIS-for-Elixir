@@ -14,7 +14,7 @@
 
 defmodule ArcGIS.Feature.Service do
   @moduledoc """
-  Feature service acccess.
+  Feature service access.
 
   For fetching data from a feature service, see `ArcGIS.Feature`.
   """
@@ -88,7 +88,7 @@ defmodule ArcGIS.Feature.Service do
   @doc """
   Sends a GET request to a feature service.
 
-  The resource is path fragment for the rquest (e.g. `/applyEdits`).
+  The resource is path fragment for the request (e.g. `/applyEdits`).
 
   Authentication tokens, etc. can be passed in via the options parameter.
   """
@@ -109,12 +109,12 @@ defmodule ArcGIS.Feature.Service do
   @doc """
   Sends a POST request to a feature service.
 
-  The resource is path fragment for the rquest (e.g. `/applyEdits`).
+  The resource is path fragment for the request (e.g. `/applyEdits`).
 
   `form_data` is a map of content to be sent in the body of the post. If
 
   Authentication tokens and URL parameters can be passed in via the options parameter.
-  Any URL parameters in `options` that are _also_ in`form_data` are overriden by the
+  Any URL parameters in `options` that are _also_ in`form_data` are overridden by the
   value in `form_data`.
   """
   def post(%__MODULE__{} = service, resource, form_data, options \\ []) do
@@ -174,7 +174,7 @@ defmodule ArcGIS.Feature.Service do
   end
 
   @doc """
-  Fetches the schema for a feature servcie and on success assigned it to the
+  Fetches the schema for a feature service and on success assigned it to the
   `schema` field of the `Service.t()`
   """
   @spec with_schema(t(), options :: Portal.request_options()) :: t()
