@@ -345,13 +345,18 @@ defmodule ArcGIS.Portal do
     end
   end
 
+  # TODO: BREAKING CHANGE -> move these functdions into ArcGIS. They are not Portal specific.
   @spec geometry_module_for(esri_type :: String.t(), z? :: boolean, m? :: boolean) ::
           geometry_struct :: atom
   def geometry_module_for("", _z, _m), do: :unknown
+
   Macros.geometry_module_for("esriGeometryMultipoint", "Geometry.MultiPoint")
   Macros.geometry_module_for("esriGeometryPoint", "Geometry.Point")
   Macros.geometry_module_for("esriGeometryPolygon", "Geometry.Polygon")
   Macros.geometry_module_for("esriGeometryPolyline", "Geometry.MultiLineString")
+
+  @spec esri_geometry_type(module()) :: String.t() | nil
+  def esri_geometry_type(_), do: nil
 
   @spec build_request(
           portal :: t(),

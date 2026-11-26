@@ -22,12 +22,15 @@ defmodule ArcGIS.Portal.Macros do
     geometry_z = String.to_atom("Elixir." <> geometry_string <> "Z")
     geometry_m = String.to_atom("Elixir." <> geometry_string <> "M")
     geometry_zm = String.to_atom("Elixir." <> geometry_string <> "ZM")
+    all_modules = [geometry_atom, geometry_z, geometry_m, geometry_zm]
 
     quote do
       def geometry_module_for(unquote(esri_type), false, false), do: unquote(geometry_atom)
       def geometry_module_for(unquote(esri_type), true, false), do: unquote(geometry_z)
       def geometry_module_for(unquote(esri_type), false, true), do: unquote(geometry_m)
       def geometry_module_for(unquote(esri_type), true, true), do: unquote(geometry_zm)
+
+      def esri_geometry_type(%x{}) when x in unquote(all_modules), do: unquote(esri_type)
     end
   end
 end
