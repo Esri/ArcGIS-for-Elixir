@@ -251,6 +251,10 @@ defmodule ArcGIS.Feature.Service do
 
   defp generate_create_document({:editor_tracking, _}, acc), do: acc
 
+  defp generate_create_document({:spatial_reference, wkid}, acc) when is_integer(wkid) do
+    Map.put(acc, "spatialReference", %{"wkid" => wkid})
+  end
+
   defp generate_create_document({key, value}, acc)
        when key in [
               :allow_geometry_updates,
