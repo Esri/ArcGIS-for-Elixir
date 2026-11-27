@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v1.0.4
+
+* Fixes
+  * Serialization of spatial references in queries
+  * Small fixes to tests and docs
+
 ## v1.0.3
 
 * Improvements
